@@ -1,0 +1,666 @@
+[
+    {
+        "id": "sf01a0b0c0d0e0f0",
+        "type": "subflow",
+        "name": "normalize-output",
+        "info": "Normalizes telemetry key-value pairs into ThingsBoard native flat JSON format.\n\nInput:\n- msg.payload: object with telemetry key-value pairs\n- msg.timestamp: (optional) epoch_ms timestamp\n- msg.output_topic: (optional) target MQTT topic\n\nOutput:\n- msg.payload: {\"ts\": <epoch_ms>, \"values\": {key: val, ...}}\n- msg.topic: set to msg.output_topic if provided",
+        "category": "template-node-red-pi",
+        "in": [
+            {
+                "x": 50,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf01a0b0c0d0e0f1"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 500,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf01a0b0c0d0e0f1",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {
+            "module": "template-node-red-pi",
+            "version": "1.0.0",
+            "author": "template-node-red-pi",
+            "desc": "ThingsBoard telemetry format normalizer"
+        },
+        "color": "#87A980",
+        "icon": "font-awesome/fa-exchange"
+    },
+    {
+        "id": "sf01a0b0c0d0e0f1",
+        "type": "function",
+        "z": "sf01a0b0c0d0e0f0",
+        "name": "normalize-to-thingsboard",
+        "func": "// Normalize telemetry output to ThingsBoard flat JSON format\n// Input: msg.payload = {key1: val1, key2: val2, ...}\n// Input: msg.timestamp (optional, epoch_ms)\n// Output: msg.payload = {\"ts\": <epoch_ms>, \"values\": {key1: val1, ...}}\n\nconst values = {};\nconst raw = msg.payload;\n\nif (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {\n    node.error('[protocol-normalization] InvalidPayload: expected object, got ' + typeof raw, msg);\n    return null;\n}\n\nfor (const [key, val] of Object.entries(raw)) {\n    // Validate key format: snake_case (at least one underscore)\n    if (!/^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(key)) {\n        node.warn('[protocol-normalization] InvalidKey: \"' + key + '\" does not match snake_case_unit pattern, skipping');\n        continue;\n    }\n\n    // Coerce string numbers to float\n    if (typeof val === 'string') {\n        const num = parseFloat(val);\n        if (!isNaN(num)) {\n            values[key] = num;\n        } else {\n            values[key] = val;\n        }\n    } else if (typeof val === 'number' && isFinite(val)) {\n        values[key] = val;\n    } else if (typeof val === 'boolean') {\n        values[key] = val;\n    } else {\n        node.warn('[protocol-normalization] InvalidValue: key \"' + key + '\" has unsupported type, skipping');\n        continue;\n    }\n}\n\nif (Object.keys(values).length === 0) {\n    node.error('[protocol-normalization] EmptyPayload: no valid telemetry keys after normalization', msg);\n    return null;\n}\n\nconst ts = msg.timestamp || Date.now();\n\nmsg.payload = {\n    ts: ts,\n    values: values\n};\n\n// Set output topic if provided\nif (msg.output_topic) {\n    msg.topic = msg.output_topic;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e000",
+        "type": "tab",
+        "label": "protocol-normalization",
+        "disabled": false,
+        "info": "Protocol Normalization Flow (FR2/FR3)\n\nNormalizes sensor data from diverse protocols into ThingsBoard native flat JSON.\n\nInput topics: nexus/raw/{protocol}/{zone_id}/{device_id}\nOutput topic: nexus/{zone_id}/{device_id}/telemetry\nOutput format: {\"ts\": <epoch_ms>, \"values\": {\"key\": value}}\n\nSupported protocols (MVP):\n- Modbus TCP (direct polling via modbus-read node)\n- Modbus RTU (direct polling via serial/modbus-read node)\n- OPC-UA (subscribe via OpcUa-Client node)\n- BACnet (polling via bacnet-read node)\n- Generic MQTT (LoRaWAN, Zigbee, Z-Wave, LwM2M, SNMP bridge outputs via raw topic)\n\nDirect polling nodes are disabled by default (require physical hardware).\nBridge-based protocols publish to nexus/raw/{protocol}/{zone_id}/{device_id}.",
+        "env": []
+    },
+    {
+        "id": "pn01a0b0c0d0e001",
+        "type": "comment",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Flow: protocol-normalization (FR2/FR3)",
+        "info": "Protocol Normalization Flow\n\nPurpose: Normalize diverse sensor protocol data into unified ThingsBoard telemetry format.\n\nSupported Protocols:\n\n1. Direct Polling (Node-RED polls device, disabled by default):\n   - Modbus TCP: modbus-read node polls holding registers via TCP\n   - Modbus RTU: modbus-read node polls holding registers via RS-485 serial\n   - OPC-UA: OpcUa-Client node subscribes to data changes\n   - BACnet: bacnet-read node polls analog inputs/values via BACnet/IP\n\n2. Bridge-based (external gateway publishes to Mosquitto):\n   - LoRaWAN: ChirpStack or similar publishes to nexus/raw/lorawan/{zone_id}/{device_id}\n   - Zigbee: Zigbee2MQTT or similar publishes to nexus/raw/zigbee/{zone_id}/{device_id}\n   - Z-Wave: Z-Wave bridge publishes to nexus/raw/zwave/{zone_id}/{device_id}\n   - LwM2M: Leshan or similar publishes to nexus/raw/lwm2m/{zone_id}/{device_id}\n   - SNMP: snmp2mqtt or similar publishes to nexus/raw/snmp/{zone_id}/{device_id}\n\nInput:\n- Raw MQTT: nexus/raw/{protocol}/{zone_id}/{device_id}\n- Modbus TCP/RTU: direct register polling via modbus-read nodes\n- OPC-UA: subscription data changes via OpcUa-Client node\n- BACnet: property reads via bacnet-read node\n\nOutput:\n- Normalized MQTT: nexus/{zone_id}/{device_id}/telemetry\n- Format: {\"ts\": <epoch_ms>, \"values\": {\"key\": value}}\n\nTelemetry key convention: snake_case with unit suffix\n- vibration_mm_s, temperature_c, power_draw_kw\n\nError handling: catch node logs all errors in format:\n[protocol-normalization] {error_type}: {message}",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "pn01a0b0c0d0e0bb",
+        "type": "mqtt-broker",
+        "name": "Local Mosquitto",
+        "broker": "mosquitto",
+        "port": "1883",
+        "clientid": "nodered-protocol-norm",
+        "autoConnect": true,
+        "usetls": false,
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "pn01a0b0c0d0e010",
+        "type": "mqtt in",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Raw Protocol MQTT",
+        "topic": "nexus/raw/+/+/+",
+        "qos": "1",
+        "datatype": "utf8",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 140,
+        "wires": [
+            [
+                "pn01a0b0c0d0e011"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e011",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "parse-topic",
+        "func": "// Extract protocol, zone_id, device_id from raw topic\n// Topic format: nexus/raw/{protocol}/{zone_id}/{device_id}\n\nconst parts = msg.topic.split('/');\n\nif (parts.length !== 5 || parts[0] !== 'nexus' || parts[1] !== 'raw') {\n    node.error('[protocol-normalization] InvalidTopic: expected nexus/raw/{protocol}/{zone_id}/{device_id}, got ' + msg.topic, msg);\n    return null;\n}\n\nmsg.protocol = parts[2];\nmsg.zone_id = parts[3];\nmsg.device_id = parts[4];\nmsg.output_topic = 'nexus/' + msg.zone_id + '/' + msg.device_id + '/telemetry';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 140,
+        "wires": [
+            [
+                "pn01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e012",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "generic-normalize",
+        "func": "// Parse raw payload and map to standardized telemetry keys\n// Supports JSON payloads with arbitrary keys\n// Uses configurable key mapping from flow context\n\n// Default key mappings: raw_key -> standard_key\n// Can be overridden via flow context 'keyMappings'\nconst defaultMappings = {\n    \"_default\": {\n        \"vibration\": \"vibration_mm_s\",\n        \"vib\": \"vibration_mm_s\",\n        \"temperature\": \"temperature_c\",\n        \"temp\": \"temperature_c\",\n        \"power\": \"power_draw_kw\",\n        \"power_draw\": \"power_draw_kw\",\n        \"vibration_mm_s\": \"vibration_mm_s\",\n        \"temperature_c\": \"temperature_c\",\n        \"power_draw_kw\": \"power_draw_kw\"\n    },\n    \"lwm2m\": {\n        \"3303/0/5700\": \"temperature_c\",\n        \"3313/0/5702\": \"vibration_mm_s\",\n        \"3328/0/5700\": \"power_draw_kw\",\n        \"temperature\": \"temperature_c\",\n        \"vibration\": \"vibration_mm_s\",\n        \"power\": \"power_draw_kw\"\n    },\n    \"snmp\": {\n        \"1.3.6.1.4.1.99.1.1\": \"temperature_c\",\n        \"1.3.6.1.4.1.99.1.2\": \"vibration_mm_s\",\n        \"1.3.6.1.4.1.99.1.3\": \"power_draw_kw\",\n        \"temperature\": \"temperature_c\",\n        \"vibration\": \"vibration_mm_s\",\n        \"power\": \"power_draw_kw\"\n    }\n};\n\nconst userMappings = flow.get('keyMappings') || {};\nconst keyMappings = Object.assign({}, defaultMappings, userMappings);\nconst protocol = msg.protocol || '_default';\n\n// Parse payload: try JSON first, then CSV, then reject binary\nlet raw;\nif (typeof msg.payload === 'object' && msg.payload !== null && !Buffer.isBuffer(msg.payload)) {\n    raw = msg.payload;\n} else if (Buffer.isBuffer(msg.payload)) {\n    // Binary payload: attempt to decode as UTF-8 string first\n    const str = msg.payload.toString('utf8').trim();\n    try {\n        raw = JSON.parse(str);\n    } catch (e) {\n        // Try CSV: key1:val1,key2:val2\n        if (str.includes(',') && str.includes(':')) {\n            raw = {};\n            const parts = str.split(',');\n            for (const part of parts) {\n                const kv = part.trim().split(':');\n                if (kv.length === 2) {\n                    raw[kv[0].trim()] = kv[1].trim();\n                }\n            }\n            if (Object.keys(raw).length === 0) {\n                node.error('[protocol-normalization] BinaryParseError: buffer has no valid key:value pairs in CSV format', msg);\n                return null;\n            }\n        } else {\n            node.error('[protocol-normalization] BinaryParseError: buffer is not valid JSON or CSV', msg);\n            return null;\n        }\n    }\n} else if (typeof msg.payload === 'string') {\n    const trimmed = msg.payload.trim();\n    try {\n        raw = JSON.parse(trimmed);\n    } catch (e) {\n        // Try CSV: key1:val1,key2:val2\n        if (trimmed.includes(',') && trimmed.includes(':')) {\n            raw = {};\n            const parts = trimmed.split(',');\n            for (const part of parts) {\n                const kv = part.trim().split(':');\n                if (kv.length === 2) {\n                    raw[kv[0].trim()] = kv[1].trim();\n                }\n            }\n            if (Object.keys(raw).length === 0) {\n                node.error('[protocol-normalization] CSVParseError: no valid key:value pairs found', msg);\n                return null;\n            }\n        } else {\n            node.error('[protocol-normalization] ParseError: payload is not valid JSON or CSV (key:val,key:val)', msg);\n            return null;\n        }\n    }\n} else {\n    node.error('[protocol-normalization] InvalidPayload: unsupported payload type ' + typeof msg.payload, msg);\n    return null;\n}\n\nif (typeof raw !== 'object' || raw === null) {\n    node.error('[protocol-normalization] InvalidPayload: expected object after parse', msg);\n    return null;\n}\n\n// Extract timestamp if present in raw data\nconst timestamp = raw.ts || raw.timestamp || Date.now();\n\n// Get mapping for this protocol, fallback to _default\nconst mapping = keyMappings[protocol] || keyMappings['_default'] || {};\n\n// Map keys\nconst normalized = {};\nfor (const [rawKey, rawVal] of Object.entries(raw)) {\n    if (rawKey === 'ts' || rawKey === 'timestamp') continue;\n    const mappedKey = mapping[rawKey];\n    if (!mappedKey) {\n        node.warn('[protocol-normalization] UnmappedKey: \"' + rawKey + '\" has no mapping for protocol \"' + protocol + '\", skipping');\n        continue;\n    }\n    normalized[mappedKey] = rawVal;\n}\n\nmsg.payload = normalized;\nmsg.timestamp = timestamp;\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 540,
+        "y": 140,
+        "wires": [
+            [
+                "pn01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e0cc",
+        "type": "modbus-client",
+        "name": "Local Modbus Device",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "${MODBUS_HOST}",
+        "tcpPort": "${MODBUS_PORT}",
+        "tcpType": "DEFAULT",
+        "serialPort": "",
+        "serialType": "RTU-BUFFERED",
+        "serialBaudrate": "9600",
+        "serialDatabits": "8",
+        "serialStopbits": "1",
+        "serialParity": "none",
+        "serialConnectionDelay": "100",
+        "serialAsciiResponseStartDelimiter": "",
+        "unit_id": "${MODBUS_UNIT_ID}",
+        "commandDelay": "1",
+        "clientTimeout": "1000",
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": "2000",
+        "parallelUnitIdsAllowed": true,
+        "showStatusActivities": true,
+        "showErrors": true
+    },
+    {
+        "id": "pn01a0b0c0d0e020",
+        "type": "modbus-read",
+        "z": "pn01a0b0c0d0e000",
+        "d": true,
+        "name": "Read Sensor Registers",
+        "topic": "",
+        "showStatusActivities": true,
+        "logIOActivities": false,
+        "showErrors": true,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "3",
+        "rate": "${MODBUS_POLL_INTERVAL_MS}",
+        "rateUnit": "ms",
+        "delayOnStart": true,
+        "startDelayTime": "5",
+        "server": "pn01a0b0c0d0e0cc",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 160,
+        "y": 280,
+        "wires": [
+            [
+                "pn01a0b0c0d0e021"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e021",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "modbus-normalize",
+        "func": "// Map Modbus register values to telemetry keys\n// msg.payload = array of register values from modbus-read\n\n// Register mapping: index -> {key, scale, offset}\n// Can be overridden via flow context 'modbusRegisterMap'\nconst defaultRegisterMap = {\n    0: { key: \"vibration_mm_s\", scale: 0.01, offset: 0 },\n    1: { key: \"temperature_c\", scale: 0.1, offset: -40 },\n    2: { key: \"power_draw_kw\", scale: 0.001, offset: 0 }\n};\n\nconst registerMap = flow.get('modbusRegisterMap') || defaultRegisterMap;\nconst zone_id = env.get('ZONE_ID') || 'zone-01';\nconst device_id = env.get('DEVICE_ID') || 'modbus-001';\n\nif (!Array.isArray(msg.payload)) {\n    node.error('[protocol-normalization] ModbusError: expected array payload, got ' + typeof msg.payload, msg);\n    return null;\n}\n\nconst normalized = {};\nfor (const [index, config] of Object.entries(registerMap)) {\n    const i = parseInt(index);\n    if (i < msg.payload.length) {\n        const rawValue = msg.payload[i];\n        if (typeof rawValue === 'number' && isFinite(rawValue)) {\n            normalized[config.key] = parseFloat(((rawValue * config.scale) + config.offset).toFixed(6));\n        }\n    }\n}\n\nif (Object.keys(normalized).length === 0) {\n    node.error('[protocol-normalization] ModbusEmpty: no registers mapped from ' + msg.payload.length + ' values', msg);\n    return null;\n}\n\nmsg.payload = normalized;\nmsg.timestamp = Date.now();\nmsg.output_topic = 'nexus/' + zone_id + '/' + device_id + '/telemetry';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 280,
+        "wires": [
+            [
+                "pn01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e0dd",
+        "type": "OpcUa-Endpoint",
+        "endpoint": "opc.tcp://${OPCUA_HOST}:${OPCUA_PORT}",
+        "secpol": "None",
+        "secmode": "None",
+        "none": true,
+        "login": false,
+        "usercert": false,
+        "usercertificate": "",
+        "userprivatekey": ""
+    },
+    {
+        "id": "pn01a0b0c0d0e050",
+        "type": "OpcUa-Client",
+        "z": "pn01a0b0c0d0e000",
+        "d": true,
+        "endpoint": "pn01a0b0c0d0e0dd",
+        "action": "subscribe",
+        "deadbandtype": "a",
+        "deadbandvalue": 1,
+        "time": 10,
+        "timeUnit": "s",
+        "certificate": "n",
+        "localfile": "",
+        "localkeyfile": "",
+        "securitymode": "None",
+        "securitypolicy": "None",
+        "useTransport": false,
+        "maxChunkCount": 0,
+        "maxMessageSize": 0,
+        "receiveBufferSize": 0,
+        "sendBufferSize": 0,
+        "name": "OPC-UA Subscribe",
+        "x": 160,
+        "y": 380,
+        "wires": [
+            [
+                "pn01a0b0c0d0e051"
+            ],
+            [
+                "pn01a0b0c0d0e041"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e051",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "opcua-normalize",
+        "func": "// Map OPC-UA subscription data to standardized telemetry keys\n// OPC-UA Client subscribe output: msg.payload contains the data value\n// msg.topic contains the OPC-UA node ID (e.g., ns=3;s=Temperature)\n\n// Node ID mapping: OPC-UA nodeId -> {key, scale, offset}\n// Can be overridden via flow context 'opcuaNodeMap'\nconst defaultNodeMap = {\n    \"ns=3;s=Temperature\": { key: \"temperature_c\", scale: 1, offset: 0 },\n    \"ns=3;s=Vibration\": { key: \"vibration_mm_s\", scale: 1, offset: 0 },\n    \"ns=3;s=Power\": { key: \"power_draw_kw\", scale: 0.001, offset: 0 }\n};\n\nconst nodeMap = flow.get('opcuaNodeMap') || defaultNodeMap;\nconst zone_id = env.get('ZONE_ID') || 'zone-01';\nconst device_id = env.get('OPCUA_DEVICE_ID') || env.get('DEVICE_ID') || 'opcua-001';\n\nconst nodeId = msg.topic || '';\nconst mapping = nodeMap[nodeId];\n\nif (!mapping) {\n    node.warn('[protocol-normalization] OpcUaUnmappedNode: \"' + nodeId + '\" has no mapping, skipping');\n    return null;\n}\n\nlet value = msg.payload;\nif (typeof value === 'object' && value !== null && value.value !== undefined) {\n    value = value.value;\n}\n\nif (typeof value !== 'number' || !isFinite(value)) {\n    node.error('[protocol-normalization] OpcUaValueError: non-numeric value for node \"' + nodeId + '\"', msg);\n    return null;\n}\n\nconst scaled = parseFloat(((value * mapping.scale) + mapping.offset).toFixed(6));\n\nmsg.payload = {};\nmsg.payload[mapping.key] = scaled;\nmsg.timestamp = Date.now();\nmsg.output_topic = 'nexus/' + zone_id + '/' + device_id + '/telemetry';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 380,
+        "wires": [
+            [
+                "pn01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e0ee",
+        "type": "BACnet-Client",
+        "name": "Local BACnet Device",
+        "interface": "${BACNET_INTERFACE}",
+        "port": "${BACNET_PORT}",
+        "broadcastAddress": "255.255.255.255",
+        "apduTimeout": 6000,
+        "numberOfRetries": 3
+    },
+    {
+        "id": "pn01a0b0c0d0e060",
+        "type": "BACnet-Read",
+        "z": "pn01a0b0c0d0e000",
+        "d": true,
+        "name": "BACnet Read Properties",
+        "objectType": "analog-input",
+        "objectInstance": "0",
+        "propertyId": "present-value",
+        "arrayIndex": "",
+        "server": "pn01a0b0c0d0e0ee",
+        "x": 170,
+        "y": 480,
+        "wires": [
+            [
+                "pn01a0b0c0d0e061"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e061",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "bacnet-normalize",
+        "func": "// Map BACnet property values to standardized telemetry keys\n// bacnet-read output: msg.payload contains BACnet read result\n// msg.payload.values[0].value contains the actual value\n\n// Object mapping: \"objectType:instance\" -> {key, scale, offset}\n// Can be overridden via flow context 'bacnetObjectMap'\nconst defaultObjectMap = {\n    \"analog-input:0\": { key: \"temperature_c\", scale: 1, offset: 0 },\n    \"analog-input:1\": { key: \"vibration_mm_s\", scale: 1, offset: 0 },\n    \"analog-value:0\": { key: \"power_draw_kw\", scale: 1, offset: 0 }\n};\n\nconst objectMap = flow.get('bacnetObjectMap') || defaultObjectMap;\nconst zone_id = env.get('ZONE_ID') || 'zone-01';\nconst device_id = env.get('BACNET_DEVICE_ID') || env.get('DEVICE_ID') || 'bacnet-001';\n\nconst normalized = {};\n\n// Handle BACnet read response format\nif (msg.payload && msg.payload.values && Array.isArray(msg.payload.values)) {\n    for (const val of msg.payload.values) {\n        const objType = val.objectId ? val.objectId.type : 'analog-input';\n        const objInst = val.objectId ? val.objectId.instance : 0;\n        const lookupKey = objType + ':' + objInst;\n        const mapping = objectMap[lookupKey];\n        if (mapping && typeof val.value === 'number' && isFinite(val.value)) {\n            normalized[mapping.key] = parseFloat(((val.value * mapping.scale) + mapping.offset).toFixed(6));\n        }\n    }\n} else if (typeof msg.payload === 'object' && msg.payload !== null) {\n    // Simple object format fallback\n    for (const [key, val] of Object.entries(msg.payload)) {\n        const mapping = objectMap[key];\n        if (mapping && typeof val === 'number' && isFinite(val)) {\n            normalized[mapping.key] = parseFloat(((val * mapping.scale) + mapping.offset).toFixed(6));\n        }\n    }\n}\n\nif (Object.keys(normalized).length === 0) {\n    node.error('[protocol-normalization] BACnetEmpty: no properties mapped from payload', msg);\n    return null;\n}\n\nmsg.payload = normalized;\nmsg.timestamp = Date.now();\nmsg.output_topic = 'nexus/' + zone_id + '/' + device_id + '/telemetry';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 480,
+        "wires": [
+            [
+                "pn01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e0ff",
+        "type": "serial-port",
+        "serialport": "${SERIAL_PORT}",
+        "serialbaud": "${SERIAL_BAUD}",
+        "databits": "8",
+        "parity": "none",
+        "stopbits": "1",
+        "waitfor": "",
+        "dtr": "none",
+        "rts": "none",
+        "cts": "none",
+        "dsr": "none",
+        "newline": "",
+        "bin": "false",
+        "out": "char",
+        "addchar": "",
+        "responsetimeout": "10000"
+    },
+    {
+        "id": "pn01a0b0c0d0e0cd",
+        "type": "modbus-client",
+        "name": "Local Modbus RTU Device",
+        "clienttype": "serial",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "",
+        "tcpPort": "",
+        "tcpType": "DEFAULT",
+        "serialPort": "${SERIAL_PORT}",
+        "serialType": "RTU-BUFFERED",
+        "serialBaudrate": "${SERIAL_BAUD}",
+        "serialDatabits": "8",
+        "serialStopbits": "1",
+        "serialParity": "none",
+        "serialConnectionDelay": "100",
+        "serialAsciiResponseStartDelimiter": "",
+        "unit_id": "${MODBUS_RTU_UNIT_ID}",
+        "commandDelay": "1",
+        "clientTimeout": "1000",
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": "2000",
+        "parallelUnitIdsAllowed": true,
+        "showStatusActivities": true,
+        "showErrors": true
+    },
+    {
+        "id": "pn01a0b0c0d0e070",
+        "type": "modbus-read",
+        "z": "pn01a0b0c0d0e000",
+        "d": true,
+        "name": "Read RTU Sensor Registers",
+        "topic": "",
+        "showStatusActivities": true,
+        "logIOActivities": false,
+        "showErrors": true,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "0",
+        "quantity": "3",
+        "rate": "${MODBUS_RTU_POLL_INTERVAL_MS}",
+        "rateUnit": "ms",
+        "delayOnStart": true,
+        "startDelayTime": "5",
+        "server": "pn01a0b0c0d0e0cd",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 180,
+        "y": 580,
+        "wires": [
+            [
+                "pn01a0b0c0d0e021"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e030",
+        "type": "subflow:sf01a0b0c0d0e0f0",
+        "z": "pn01a0b0c0d0e000",
+        "name": "normalize-output",
+        "x": 730,
+        "y": 200,
+        "wires": [
+            [
+                "pn01a0b0c0d0e035"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e035",
+        "type": "subflow:sf02a0b0c0d0e0f0",
+        "z": "pn01a0b0c0d0e000",
+        "name": "rbe-filter",
+        "x": 730,
+        "y": 260,
+        "wires": [
+            [
+                "pn01a0b0c0d0e031"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e031",
+        "type": "mqtt out",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Publish Normalized",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 930,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "pn01a0b0c0d0e040",
+        "type": "catch",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Catch Normalization Errors",
+        "scope": ["pn01a0b0c0d0e000"],
+        "uncaught": false,
+        "x": 140,
+        "y": 700,
+        "wires": [
+            [
+                "pn01a0b0c0d0e041"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e041",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "error-log",
+        "func": "// Format error message for logging\nconst errorSource = msg.error ? msg.error.source : {};\nconst errorMsg = msg.error ? msg.error.message : 'Unknown error';\nconst nodeName = errorSource.name || errorSource.id || 'unknown';\n\nnode.warn('[protocol-normalization] ' + nodeName + ': ' + errorMsg);\n\n// Prepare error status for gateway health (consumed by gateway-health flow in Story 1.6)\nmsg.payload = {\n    ts: Date.now(),\n    values: {\n        norm_error_count: 1,\n        norm_last_error: errorMsg.substring(0, 200)\n    }\n};\nmsg.topic = 'nexus/internal/normalization-errors';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 700,
+        "wires": [
+            [
+                "pn01a0b0c0d0e043",
+                "pn01a0b0c0d0e042"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e043",
+        "type": "mqtt out",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Publish Errors",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 570,
+        "y": 740,
+        "wires": []
+    },
+    {
+        "id": "pn01a0b0c0d0e042",
+        "type": "debug",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Error Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "error.message",
+        "statusType": "msg",
+        "x": 570,
+        "y": 660,
+        "wires": []
+    },
+    {
+        "id": "pn01a0b0c0d0e039",
+        "type": "inject",
+        "z": "pn01a0b0c0d0e000",
+        "name": "RBE Config Init",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 140,
+        "y": 820,
+        "wires": [
+            [
+                "pn01a0b0c0d0e03a"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e03a",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "load-rbe-config",
+        "func": "// Load RBE deadband thresholds from environment variables into flow context\n// Called once on deploy via inject node\n\nvar thresholds = {};\n\n// Read per-key deadband thresholds from env vars\nvar tempDb = parseFloat(env.get('RBE_DEADBAND_TEMPERATURE_C'));\nif (!isNaN(tempDb) && tempDb >= 0) {\n    thresholds['temperature_c'] = tempDb;\n}\n\nvar vibDb = parseFloat(env.get('RBE_DEADBAND_VIBRATION_MM_S'));\nif (!isNaN(vibDb) && vibDb >= 0) {\n    thresholds['vibration_mm_s'] = vibDb;\n}\n\nvar powerDb = parseFloat(env.get('RBE_DEADBAND_POWER_DRAW_KW'));\nif (!isNaN(powerDb) && powerDb >= 0) {\n    thresholds['power_draw_kw'] = powerDb;\n}\n\n// Default deadband for unconfigured keys\nvar defaultDb = parseFloat(env.get('RBE_DEADBAND_DEFAULT'));\nif (isNaN(defaultDb) || defaultDb < 0) {\n    defaultDb = 0;\n}\n\nglobal.set('rbeThresholds', thresholds);\nglobal.set('rbeDefaultDeadband', defaultDb);\nglobal.set('rbeFilteredCount', 0);\n\nvar keyCount = Object.keys(thresholds).length;\nnode.status({fill: 'green', shape: 'dot', text: keyCount + ' keys configured, default=' + defaultDb});\nnode.warn('[rbe-filter] Config loaded: ' + keyCount + ' per-key thresholds, default deadband=' + defaultDb);\n\nreturn null;",
+        "outputs": 0,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 820,
+        "wires": []
+    },
+    {
+        "id": "pn01a0b0c0d0e036",
+        "type": "inject",
+        "z": "pn01a0b0c0d0e000",
+        "name": "RBE Stats Interval (30s)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "30",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "10",
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 900,
+        "wires": [
+            [
+                "pn01a0b0c0d0e037"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e037",
+        "type": "function",
+        "z": "pn01a0b0c0d0e000",
+        "name": "rbe-stats-publish",
+        "func": "// Read RBE filtered count from flow context and publish stats\n// Resets count after publishing (per-interval count)\n\nvar filteredCount = global.get('rbeFilteredCount') || 0;\n\nmsg.payload = JSON.stringify({\n    filtered_count: filteredCount,\n    timestamp: Date.now()\n});\nmsg.topic = 'nexus/internal/rbe-status';\n\n// Reset count for next interval\nglobal.set('rbeFilteredCount', 0);\n\nnode.status({fill: 'blue', shape: 'dot', text: 'filtered: ' + filteredCount});\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 900,
+        "wires": [
+            [
+                "pn01a0b0c0d0e038"
+            ]
+        ]
+    },
+    {
+        "id": "pn01a0b0c0d0e038",
+        "type": "mqtt out",
+        "z": "pn01a0b0c0d0e000",
+        "name": "Publish RBE Stats",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 620,
+        "y": 900,
+        "wires": []
+    }
+]

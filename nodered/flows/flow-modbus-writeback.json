@@ -1,0 +1,492 @@
+[
+    {
+        "id": "mw01a0b0c0d0e000",
+        "type": "tab",
+        "label": "modbus-writeback",
+        "disabled": false,
+        "info": "Modbus Write-Back Flow (FR49)\n\nWrites control commands to solar inverters via Modbus TCP/RTU.\nReceives commands from two sources:\n1. Grid operator via IEC104: nexus/internal/iec104-command\n2. Cloud RPC / direct: nexus/{zone_id}/{device_id}/command\n\nCommand validation:\n- Required fields: device_id, action, value\n- Supported actions: set_export_limit_kw\n- Value range: MODBUS_EXPORT_LIMIT_MIN to MODBUS_EXPORT_LIMIT_MAX (env vars)\n- Device must exist in device registry (flow context)\n\nOutput topics:\n- nexus/internal/writeback-status — write confirmation\n- nexus/internal/writeback-errors — write failures\n- nexus/{zone_id}/{device_id}/telemetry — updated telemetry after write\n\nRetry: 1 retry on failure with 500ms delay.\nRead-back verification after each write.\n\nEnvironment variables:\n- MODBUS_EXPORT_LIMIT_MIN (default: 0)\n- MODBUS_EXPORT_LIMIT_MAX (default: 100)\n- ZONE_ID (default: zone-01)",
+        "env": []
+    },
+    {
+        "id": "mw01a0b0c0d0e001",
+        "type": "comment",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Flow: modbus-writeback (FR49)",
+        "info": "Modbus Write-Back for Inverter Control\n\nPurpose: Write control commands (export power limits) to solar inverters via Modbus TCP/RTU.\n\nSources:\n- nexus/internal/iec104-command (grid operator via Story 2.1)\n- nexus/{zone_id}/{device_id}/command (cloud RPC / direct)\n\nSequence:\n1. Receive command from MQTT\n2. Normalize to unified format\n3. Validate (device exists, value in range, action supported)\n4. Resolve Modbus address from device registry\n5. Write to Modbus register (FC6)\n6. Read-back to verify\n7. Publish confirmation or error\n8. Update telemetry with new value\n\nRetry: 1 retry with 500ms delay on write/verify failure.\n\nError format: [modbus-writeback] {ErrorType}: {message}",
+        "x": 230,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e010",
+        "type": "mqtt in",
+        "z": "mw01a0b0c0d0e000",
+        "name": "IEC104 Commands",
+        "topic": "nexus/internal/iec104-command",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 140,
+        "wires": [
+            [
+                "mw01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e011",
+        "type": "mqtt in",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Device Commands",
+        "topic": "nexus/+/+/command",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 140,
+        "y": 220,
+        "wires": [
+            [
+                "mw01a0b0c0d0e013"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e012",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "normalize-iec104-cmd",
+        "func": "// IEC104 commands already have the full structure from Story 2.1:\n// {device_id, zone_id, action, value, unit, source, timestamp, event_id}\n// Just pass through with source validation\n// Story 2.4: preserve event_id for audit correlation\n\nconst cmd = msg.payload;\n\nif (typeof cmd !== 'object' || cmd === null) {\n    msg.command = { device_id: 'unknown', zone_id: 'unknown', action: 'unknown' };\n    node.error('[modbus-writeback] ValidationError: IEC104 command payload is not an object', msg);\n    return null;\n}\n\nmsg.command = {\n    device_id: cmd.device_id || '',\n    zone_id: cmd.zone_id || '',\n    action: cmd.action || '',\n    value: cmd.value,\n    unit: cmd.unit || '',\n    source: cmd.source || 'iec104',\n    timestamp: cmd.timestamp || Date.now(),\n    event_id: cmd.event_id || ''\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 140,
+        "wires": [
+            [
+                "mw01a0b0c0d0e020"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e013",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "normalize-device-cmd",
+        "func": "// Cloud/direct commands arrive on topic: nexus/{zone_id}/{device_id}/command\n// Extract zone_id and device_id from topic — topic is authoritative (security)\n\nconst parts = msg.topic.split('/');\n\nif (parts.length !== 4 || parts[0] !== 'nexus' || parts[3] !== 'command') {\n    msg.command = { device_id: 'unknown', zone_id: 'unknown', action: 'unknown' };\n    node.error('[modbus-writeback] ValidationError: invalid command topic format: ' + msg.topic, msg);\n    return null;\n}\n\nconst cmd = msg.payload;\n\nif (typeof cmd !== 'object' || cmd === null) {\n    msg.command = { device_id: parts[2], zone_id: parts[1], action: 'unknown' };\n    node.error('[modbus-writeback] ValidationError: command payload is not an object', msg);\n    return null;\n}\n\n// Topic-derived device_id and zone_id are authoritative — payload cannot override\nmsg.command = {\n    device_id: parts[2],\n    zone_id: parts[1],\n    action: cmd.action || '',\n    value: cmd.value,\n    unit: cmd.unit || '',\n    source: 'cloud',\n    timestamp: cmd.timestamp || Date.now()\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 220,
+        "wires": [
+            [
+                "mw01a0b0c0d0e020"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e020",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "validate-command",
+        "func": "// Validate command fields, action, value range, and device existence\n// Uses flow context for device registry and env vars for limits\n// Story 2.4: include source and event_id in all error payloads for audit trail\n\nconst cmd = msg.command;\n\nif (!cmd) {\n    node.error('[modbus-writeback] ValidationError: no command object in message', msg);\n    return [null, msg];\n}\n\n// Helper to build error payload with audit fields\nfunction buildError(fields) {\n    return Object.assign({\n        source: cmd.source || '',\n        event_id: cmd.event_id || '',\n        retries_exhausted: false,\n        timestamp: Date.now()\n    }, fields);\n}\n\n// Required fields\nif (!cmd.device_id) {\n    msg.payload = buildError({\n        device_id: cmd.device_id || 'unknown',\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action || 'unknown',\n        value: cmd.value,\n        error: \"missing required field 'device_id'\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: missing required field device_id');\n    return [null, msg];\n}\n\nif (!cmd.action) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: 'unknown',\n        value: cmd.value,\n        error: \"missing required field 'action'\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: missing required field action');\n    return [null, msg];\n}\n\nif (cmd.value === undefined || cmd.value === null) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: null,\n        error: \"missing required field 'value'\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: missing required field value');\n    return [null, msg];\n}\n\n// Validate action is supported\nconst supportedActions = ['set_export_limit_kw'];\nif (!supportedActions.includes(cmd.action)) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: cmd.value,\n        error: \"unsupported action '\" + cmd.action + \"'. Supported: \" + supportedActions.join(', ')\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: unsupported action ' + cmd.action);\n    return [null, msg];\n}\n\n// Validate value is numeric\nconst numValue = parseFloat(cmd.value);\nif (isNaN(numValue) || !isFinite(numValue)) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: cmd.value,\n        error: \"value is not a valid number: '\" + cmd.value + \"'\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: non-numeric value ' + cmd.value);\n    return [null, msg];\n}\n\n// Validate value range\nconst minLimit = parseFloat(env.get('MODBUS_EXPORT_LIMIT_MIN')) || 0;\nconst maxLimit = parseFloat(env.get('MODBUS_EXPORT_LIMIT_MAX')) || 100;\n\nif (numValue < minLimit || numValue > maxLimit) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: numValue,\n        error: \"value \" + numValue + \" out of safe range [\" + minLimit + \", \" + maxLimit + \"]\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: value ' + numValue + ' out of range [' + minLimit + ', ' + maxLimit + ']');\n    return [null, msg];\n}\n\n// Validate device exists in registry\nconst deviceRegistry = flow.get('deviceRegistry') || {};\nconst device = deviceRegistry[cmd.device_id];\n\nif (!device) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: numValue,\n        error: \"device '\" + cmd.device_id + \"' not found in registry\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: unknown device ' + cmd.device_id);\n    return [null, msg];\n}\n\n// Resolve action to register\nconst actionMap = flow.get('actionMap') || {};\nconst registerInfo = actionMap[cmd.action];\n\nif (!registerInfo) {\n    msg.payload = buildError({\n        device_id: cmd.device_id,\n        zone_id: cmd.zone_id || 'unknown',\n        action: cmd.action,\n        value: numValue,\n        error: \"no register mapping for action '\" + cmd.action + \"'\"\n    });\n    msg.topic = 'nexus/internal/writeback-errors';\n    node.warn('[modbus-writeback] ValidationError: no register mapping for ' + cmd.action);\n    return [null, msg];\n}\n\n// Scale value for register write\nconst scaleFactor = registerInfo.scale_factor || 1;\nconst registerValue = Math.round(numValue / scaleFactor);\n\n// Build validated command with Modbus addressing\nmsg.command = cmd;\nmsg.command.value = numValue;\nmsg.modbusDevice = device;\nmsg.modbusRegister = registerInfo;\nmsg.registerValue = registerValue;\nmsg.originalValue = numValue;\nmsg.retryCount = msg.retryCount || 0;\n\n// Set Modbus write parameters\nmsg.payload = {\n    value: registerValue,\n    fc: 6,\n    unitid: device.unit_id,\n    address: registerInfo.register_address,\n    quantity: 1\n};\n\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 600,
+        "y": 180,
+        "wires": [
+            [
+                "mw01a0b0c0d0e030"
+            ],
+            [
+                "mw01a0b0c0d0e070",
+                "mw01a0b0c0d0e081"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e002",
+        "type": "inject",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Init Registry",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "0.1",
+        "topic": "",
+        "payload": "{}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 340,
+        "wires": [
+            [
+                "mw01a0b0c0d0e003"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e003",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "init-device-registry",
+        "func": "// Initialize device registry and action-to-register mapping in flow context.\n// In production, this would be loaded from a config file or ThingsBoard attributes.\n// For now, uses sensible defaults for a single inverter setup.\n\n// Device registry: device_id -> Modbus connection details\nconst deviceRegistry = {\n    \"inverter-01\": {\n        modbus_host: env.get('MODBUS_HOST') || '127.0.0.1',\n        modbus_port: parseInt(env.get('MODBUS_PORT')) || 502,\n        unit_id: parseInt(env.get('MODBUS_RTU_UNIT_ID')) || 1,\n        protocol: 'tcp'\n    }\n};\n\n// Action-to-register mapping: action -> Modbus register details\n// register_address: Modbus register to write\n// data_type: HoldingRegister\n// scale_factor: value_in_kw * (1/scale_factor) = register_value\n//   e.g., 50.0 kW / 0.1 = 500 (register stores 1 decimal place)\nconst actionMap = {\n    \"set_export_limit_kw\": {\n        register_address: 100,\n        register_type: \"HoldingRegister\",\n        data_type: \"INT16\",\n        scale_factor: 0.1,\n        telemetry_key: \"export_limit_kw\"\n    }\n};\n\nflow.set('deviceRegistry', deviceRegistry);\nflow.set('actionMap', actionMap);\n\nnode.log('[modbus-writeback] Device registry initialized: ' + Object.keys(deviceRegistry).length + ' devices, ' + Object.keys(actionMap).length + ' actions');\n\nreturn null;",
+        "outputs": 0,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 380,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e030",
+        "type": "modbus-write",
+        "z": "mw01a0b0c0d0e000",
+        "d": true,
+        "name": "Write Inverter Register",
+        "showStatusActivities": true,
+        "showErrors": true,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "",
+        "quantity": "1",
+        "server": "pn01a0b0c0d0e0cc",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 170,
+        "y": 460,
+        "wires": [
+            [
+                "mw01a0b0c0d0e035"
+            ],
+            [
+                "mw01a0b0c0d0e050"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e031",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "prepare-modbus-write",
+        "func": "// Prepare msg for node-red-contrib-modbus write node\n// The modbus-write node expects:\n// msg.payload.value (or msg.payload as array for FC16)\n// msg.payload.unitid, msg.payload.fc, msg.payload.address, msg.payload.quantity\n//\n// Since we set keepMsgProperties=true, our command context persists.\n\nconst device = msg.modbusDevice;\nconst register = msg.modbusRegister;\nconst registerValue = msg.registerValue;\n\n// For FC6 (Write Single Register), payload is the value\nmsg.payload = {\n    value: registerValue,\n    fc: 6,\n    unitid: device.unit_id,\n    address: register.register_address,\n    quantity: 1\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 790,
+        "y": 180,
+        "wires": [
+            [
+                "mw01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e035",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "prepare-readback",
+        "func": "// After modbus-write, msg.payload is the write response.\n// Re-set msg.payload with read parameters so modbus-read knows\n// which register to read back for verification.\n\nconst device = msg.modbusDevice;\nconst register = msg.modbusRegister;\n\nmsg.payload = {\n    fc: 3,\n    unitid: device.unit_id,\n    address: register.register_address,\n    quantity: 1\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 290,
+        "y": 460,
+        "wires": [
+            [
+                "mw01a0b0c0d0e040"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e040",
+        "type": "modbus-read",
+        "z": "mw01a0b0c0d0e000",
+        "d": true,
+        "name": "Read-Back Register",
+        "topic": "",
+        "showStatusActivities": true,
+        "logIOActivities": false,
+        "showErrors": true,
+        "showWarnings": true,
+        "unitid": "",
+        "dataType": "HoldingRegister",
+        "adr": "",
+        "quantity": "1",
+        "rate": "0",
+        "rateUnit": "s",
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "server": "pn01a0b0c0d0e0cc",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "x": 430,
+        "y": 460,
+        "wires": [
+            [
+                "mw01a0b0c0d0e041"
+            ],
+            [
+                "mw01a0b0c0d0e050"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e041",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "verify-readback",
+        "func": "// Compare written value with read-back value\n// msg.payload = array of register values from modbus-read\n// msg.registerValue = value that was written\n// msg.originalValue = original command value in kW\n// msg.modbusRegister.scale_factor = conversion factor\n\nconst readValues = msg.payload;\nconst writtenValue = msg.registerValue;\nconst tolerance = 1; // 1 register unit tolerance for rounding\n\nif (!Array.isArray(readValues) || readValues.length === 0) {\n    // Read-back failed — treat as write failure\n    msg.verifyError = 'read-back returned empty or invalid data';\n    return [null, msg];\n}\n\nconst readValue = readValues[0];\nconst diff = Math.abs(readValue - writtenValue);\n\nif (diff > tolerance) {\n    // Mismatch — treat as write failure\n    msg.verifyError = 'read-back mismatch — wrote ' + writtenValue + ', read ' + readValue;\n    return [null, msg];\n}\n\n// Verification passed\nreturn [msg, null];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 460,
+        "wires": [
+            [
+                "mw01a0b0c0d0e060"
+            ],
+            [
+                "mw01a0b0c0d0e050"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e050",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "retry-handler",
+        "func": "// Handle write/verify failures with retry logic\n// Max 1 retry (retryCount starts at 0)\n\nconst maxRetries = 1;\nconst retryCount = msg.retryCount || 0;\nconst cmd = msg.command || {};\nconst errorReason = msg.verifyError || (msg.error ? msg.error.message : 'Modbus write failed');\n\nif (retryCount < maxRetries) {\n    // Retry: increment count and re-route to write\n    msg.retryCount = retryCount + 1;\n    node.warn('[modbus-writeback] RetryAttempt: ' + errorReason + ' — retry ' + msg.retryCount + '/' + maxRetries + ' for device ' + cmd.device_id);\n    return [msg, null];\n}\n\n// Retries exhausted: publish error (includes event_id for Story 2.4 audit trail)\nmsg.payload = {\n    device_id: cmd.device_id || 'unknown',\n    zone_id: cmd.zone_id || 'unknown',\n    action: cmd.action || 'unknown',\n    value: msg.originalValue,\n    error: errorReason,\n    retries_exhausted: true,\n    timestamp: Date.now(),\n    source: cmd.source || '',\n    event_id: cmd.event_id || ''\n};\nmsg.topic = 'nexus/internal/writeback-errors';\n\nnode.warn('[modbus-writeback] ModbusError: ' + errorReason + ' — retries exhausted for device ' + cmd.device_id);\n\nreturn [null, msg];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 560,
+        "wires": [
+            [
+                "mw01a0b0c0d0e052"
+            ],
+            [
+                "mw01a0b0c0d0e070",
+                "mw01a0b0c0d0e081"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e052",
+        "type": "delay",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Retry Delay 500ms",
+        "pauseType": "delay",
+        "timeout": "500",
+        "timeoutUnits": "milliseconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 420,
+        "y": 560,
+        "wires": [
+            [
+                "mw01a0b0c0d0e031"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e060",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "build-confirmation",
+        "func": "// Build confirmation message and telemetry update\n// Output 1: writeback-status confirmation\n// Output 2: telemetry update\n// Story 2.4: include event_id for audit correlation\n\nconst cmd = msg.command || {};\nconst register = msg.modbusRegister || {};\nconst now = Date.now();\n\n// Confirmation message (includes event_id for Story 2.4 audit trail)\nconst confirmation = {\n    device_id: cmd.device_id,\n    zone_id: cmd.zone_id,\n    action: cmd.action,\n    value: msg.originalValue,\n    register_address: register.register_address,\n    status: 'confirmed',\n    source: cmd.source,\n    timestamp: now,\n    event_id: cmd.event_id || ''\n};\n\n// Telemetry update — use command timestamp for ThingsBoard ordering accuracy\nconst telemetryKey = register.telemetry_key || 'export_limit_kw';\nconst telemetry = {\n    ts: cmd.timestamp || now,\n    values: {}\n};\ntelemetry.values[telemetryKey] = msg.originalValue;\n\nconst msg1 = {\n    payload: confirmation,\n    topic: 'nexus/internal/writeback-status'\n};\n\nconst msg2 = {\n    payload: telemetry,\n    topic: 'nexus/' + cmd.zone_id + '/' + cmd.device_id + '/telemetry'\n};\n\nnode.log('[modbus-writeback] WriteConfirmed: ' + cmd.action + '=' + msg.originalValue + ' for device ' + cmd.device_id);\n\nreturn [msg1, msg2];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 460,
+        "wires": [
+            [
+                "mw01a0b0c0d0e061",
+                "mw01a0b0c0d0e080"
+            ],
+            [
+                "mw01a0b0c0d0e062",
+                "mw01a0b0c0d0e080"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e061",
+        "type": "mqtt out",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Publish Writeback Status",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 1110,
+        "y": 420,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e062",
+        "type": "mqtt out",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Publish Updated Telemetry",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 1120,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e070",
+        "type": "mqtt out",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Publish Writeback Errors",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 1110,
+        "y": 580,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e090",
+        "type": "catch",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Catch Writeback Errors",
+        "scope": ["mw01a0b0c0d0e000"],
+        "uncaught": false,
+        "x": 160,
+        "y": 660,
+        "wires": [
+            [
+                "mw01a0b0c0d0e091"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e091",
+        "type": "function",
+        "z": "mw01a0b0c0d0e000",
+        "name": "error-log",
+        "func": "// Format caught errors for logging and publishing\n// Story 2.4: include source and event_id for audit trail\nconst errorSource = msg.error ? msg.error.source : {};\nconst errorMsg = msg.error ? msg.error.message : 'Unknown error';\nconst nodeName = errorSource.name || errorSource.id || 'unknown';\nconst cmd = msg.command || {};\n\nnode.warn('[modbus-writeback] ' + nodeName + ': ' + errorMsg);\n\nmsg.payload = {\n    device_id: cmd.device_id || 'unknown',\n    zone_id: cmd.zone_id || 'unknown',\n    action: cmd.action || 'unknown',\n    value: msg.originalValue || null,\n    error: '[modbus-writeback] ' + nodeName + ': ' + errorMsg,\n    retries_exhausted: false,\n    timestamp: Date.now(),\n    source: cmd.source || '',\n    event_id: cmd.event_id || ''\n};\nmsg.topic = 'nexus/internal/writeback-errors';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 660,
+        "wires": [
+            [
+                "mw01a0b0c0d0e070",
+                "mw01a0b0c0d0e081"
+            ]
+        ]
+    },
+    {
+        "id": "mw01a0b0c0d0e080",
+        "type": "debug",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Confirmation Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1110,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "mw01a0b0c0d0e081",
+        "type": "debug",
+        "z": "mw01a0b0c0d0e000",
+        "name": "Error Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.error",
+        "statusType": "msg",
+        "x": 1090,
+        "y": 660,
+        "wires": []
+    }
+]

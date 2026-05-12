@@ -1,0 +1,2489 @@
+[
+    {
+        "id": "ddb875b696c74e74",
+        "type": "tab",
+        "label": "IEC104 - Modbus - Solis",
+        "disabled": false,
+        "info": "",
+        "env": []
+    },
+    {
+        "id": "eff710477ec09737",
+        "type": "group",
+        "z": "ddb875b696c74e74",
+        "name": "Setting Config & Running Make",
+        "style": {
+            "label": true,
+            "label-position": "ne",
+            "color": "#ff0000"
+        },
+        "nodes": [
+            "0bcf0fd773120189",
+            "a753fd27c14bbe60",
+            "38b2265da195c2e0"
+        ],
+        "x": 54,
+        "y": 19,
+        "w": 612,
+        "h": 122
+    },
+    {
+        "id": "eb7e230dd612b0e9",
+        "type": "group",
+        "z": "ddb875b696c74e74",
+        "name": "IEC104_Server",
+        "style": {
+            "label": true,
+            "label-position": "ne",
+            "color": "#ff0000"
+        },
+        "nodes": [
+            "63bc1b1.7e009e4",
+            "4a373436.5fb2a4",
+            "7ce67f1.66889",
+            "a1cfc08e.f6db38",
+            "a474870b.e2c8d8",
+            "ebb746e.4b4efb8",
+            "e0f7a1e9.6b3798",
+            "981fe303.297518",
+            "fca8907bceb96e90",
+            "be056a4d3f107817",
+            "128063fb3715deec",
+            "ef5e5c64addc3e87",
+            "0a0a309d811b5d6b",
+            "47791ac1c6967275",
+            "36f5e3b972ab963b",
+            "5210b23a1bae4fe4",
+            "d175e3bbbd7cddce"
+        ],
+        "x": 54,
+        "y": 159,
+        "w": 1132,
+        "h": 402
+    },
+    {
+        "id": "fda60e9ab5acc073",
+        "type": "group",
+        "z": "ddb875b696c74e74",
+        "name": "VPN Check",
+        "style": {
+            "label": true
+        },
+        "nodes": [
+            "f53d71d1c74036aa",
+            "750a311c3781bd63",
+            "69541dc46210de30",
+            "ca7a6453af983d97",
+            "b74fec2a4c81436b",
+            "9a0209888f16b91a",
+            "02616c457a5be7c0",
+            "e7b116305d975172",
+            "80619d8e1c379922",
+            "d5b0b70f092b6be4",
+            "cb7ea82ba00fa75f",
+            "aa44e873e5772eb1",
+            "bee7adef3042ec11",
+            "334b658fc7bbd98a",
+            "2388109e9cc6ee5b",
+            "f508233c5361c036",
+            "49307f1f5dfd4b82",
+            "808e41d852a507bc",
+            "fb37da38083d2cbf",
+            "51be415f690b0e5a",
+            "7e1df5a8c48c51a9",
+            "d9bac8298acd029a",
+            "5c92d6279e2b1234",
+            "258d4ea203ee2b3f",
+            "8b89563503872b09",
+            "141c34fac0113d0b",
+            "763ca39814949142",
+            "0030978895b252c7"
+        ],
+        "x": 34,
+        "y": 1939,
+        "w": 1252,
+        "h": 622
+    },
+    {
+        "id": "c29be2c98811e059",
+        "type": "modbus-client",
+        "name": "Logger Solis",
+        "clienttype": "tcp",
+        "bufferCommands": true,
+        "stateLogEnabled": false,
+        "queueLogEnabled": false,
+        "failureLogEnabled": true,
+        "tcpHost": "192.168.1.254",
+        "tcpPort": 502,
+        "tcpType": "DEFAULT",
+        "serialPort": "/dev/ttyUSB",
+        "serialType": "RTU-BUFFERD",
+        "serialBaudrate": 9600,
+        "serialDatabits": 8,
+        "serialStopbits": 1,
+        "serialParity": "none",
+        "serialConnectionDelay": 100,
+        "serialAsciiResponseStartDelimiter": "0x3A",
+        "unit_id": "1",
+        "commandDelay": 1,
+        "clientTimeout": 1000,
+        "reconnectOnTimeout": true,
+        "reconnectTimeout": 2000,
+        "parallelUnitIdsAllowed": true,
+        "showErrors": true,
+        "showWarnings": false,
+        "showLogs": true
+    },
+    {
+        "id": "6cc9915a2208805b",
+        "type": "tls-config",
+        "name": "Det-chung-tien-vhouse",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "client.crt",
+        "keyname": "client.key",
+        "caname": "ca.crt",
+        "servername": "",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "1b7a07d086ec7819",
+        "type": "mqtt-broker",
+        "name": "",
+        "broker": "tichhop-vhouse-1414289788.udata.ai",
+        "port": "8883",
+        "tls": "6cc9915a2208805b",
+        "clientid": "tichhop-vhouse/det-chungtien",
+        "autoConnect": true,
+        "usetls": true,
+        "protocolVersion": 4,
+        "keepalive": 60,
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "",
+        "birthQos": "0",
+        "birthRetain": "false",
+        "birthPayload": "",
+        "birthMsg": {},
+        "closeTopic": "",
+        "closeQos": "0",
+        "closeRetain": "false",
+        "closePayload": "",
+        "closeMsg": {},
+        "willTopic": "",
+        "willQos": "0",
+        "willRetain": "false",
+        "willPayload": "",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": ""
+    },
+    {
+        "id": "27a071c15915ef14",
+        "type": "sqlitedb",
+        "db": "/home/pi/projects/ipsec.db",
+        "mode": "RWC"
+    },
+    {
+        "id": "17b7c3aa5ff50a0d",
+        "type": "global-config",
+        "env": []
+    },
+    {
+        "id": "63bc1b1.7e009e4",
+        "type": "json",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Turn to json Template",
+        "property": "payload",
+        "action": "obj",
+        "pretty": true,
+        "x": 860,
+        "y": 440,
+        "wires": [
+            [
+                "4a373436.5fb2a4",
+                "a474870b.e2c8d8"
+            ]
+        ]
+    },
+    {
+        "id": "4a373436.5fb2a4",
+        "type": "link out",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "IEC-Server-Out",
+        "mode": "link",
+        "links": [
+            "ce7dd5c2ad56da72"
+        ],
+        "x": 1080,
+        "y": 440,
+        "wires": [],
+        "l": true
+    },
+    {
+        "id": "7ce67f1.66889",
+        "type": "link in",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "IEC-Server-In",
+        "links": [
+            "cd1303b68abc516b"
+        ],
+        "x": 170,
+        "y": 480,
+        "wires": [
+            [
+                "981fe303.297518"
+            ]
+        ],
+        "l": true
+    },
+    {
+        "id": "a1cfc08e.f6db38",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Check and Split Data",
+        "func": "var outputMsgs = [];\nvar objects = msg.payload.split(\"\\n\");\nfor (var o in objects) {\n if(objects[o].length > 10) {\n outputMsgs.push({payload:objects[o]});\n    }\n}\nreturn [ outputMsgs ];\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 640,
+        "y": 440,
+        "wires": [
+            [
+                "63bc1b1.7e009e4"
+            ]
+        ]
+    },
+    {
+        "id": "a474870b.e2c8d8",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1030,
+        "y": 500,
+        "wires": []
+    },
+    {
+        "id": "ebb746e.4b4efb8",
+        "type": "catch",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "",
+        "scope": [
+            "81025435f57bfe77"
+        ],
+        "uncaught": false,
+        "x": 150,
+        "y": 340,
+        "wires": [
+            [
+                "e0f7a1e9.6b3798"
+            ]
+        ]
+    },
+    {
+        "id": "e0f7a1e9.6b3798",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "",
+        "active": true,
+        "tosidebar": true,
+        "console": true,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 340,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "981fe303.297518",
+        "type": "daemon",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "iec104-server",
+        "command": "/home/pi/projects/json-iec104-server",
+        "args": "",
+        "autorun": true,
+        "cr": true,
+        "redo": true,
+        "op": "string",
+        "closer": "SIGINT",
+        "x": 400,
+        "y": 440,
+        "wires": [
+            [
+                "a1cfc08e.f6db38"
+            ],
+            [
+                "5210b23a1bae4fe4"
+            ],
+            [
+                "d175e3bbbd7cddce"
+            ]
+        ],
+        "icon": "font-awesome/fa-server"
+    },
+    {
+        "id": "fca8907bceb96e90",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Stop",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"0\",\"value\":0,\"address\":0,\"qualifier\":\"0\"}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 440,
+        "wires": [
+            [
+                "981fe303.297518"
+            ]
+        ]
+    },
+    {
+        "id": "be056a4d3f107817",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Start",
+        "props": [
+            {
+                "p": "start",
+                "v": "",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 400,
+        "wires": [
+            [
+                "981fe303.297518"
+            ]
+        ]
+    },
+    {
+        "id": "128063fb3715deec",
+        "type": "file in",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Read Config",
+        "filename": "/home/pi/iec104_config.json",
+        "filenameType": "str",
+        "format": "utf8",
+        "chunk": false,
+        "sendError": false,
+        "encoding": "none",
+        "allProps": false,
+        "x": 390,
+        "y": 200,
+        "wires": [
+            [
+                "0a0a309d811b5d6b"
+            ]
+        ]
+    },
+    {
+        "id": "ef5e5c64addc3e87",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Read Config IOA",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 180,
+        "y": 200,
+        "wires": [
+            [
+                "128063fb3715deec"
+            ]
+        ]
+    },
+    {
+        "id": "0a0a309d811b5d6b",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "debug 7",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 620,
+        "y": 220,
+        "wires": []
+    },
+    {
+        "id": "47791ac1c6967275",
+        "type": "file",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Write Config",
+        "filename": "/home/pi/iec104_config.json",
+        "filenameType": "str",
+        "appendNewline": true,
+        "createDir": false,
+        "overwriteFile": "true",
+        "encoding": "none",
+        "x": 390,
+        "y": 240,
+        "wires": [
+            [
+                "0a0a309d811b5d6b"
+            ]
+        ]
+    },
+    {
+        "id": "36f5e3b972ab963b",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "Write Config",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"ASDU\":3,\"offline_udt_time\":5,\"M_SP_TB_1_config\":[82],\"M_ME_NC_1_config\":[1,2,3,4,5,6,7,8,9,10,11,12,80,81],\"M_ME_NC_1_deadband_percent\":0,\"C_SE_NC_1_config\":[12,13],\"C_SC_NA_1_config\":[11],\"mode_command\":\"direct\"}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 240,
+        "wires": [
+            [
+                "47791ac1c6967275"
+            ]
+        ]
+    },
+    {
+        "id": "ce7dd5c2ad56da72",
+        "type": "link in",
+        "z": "ddb875b696c74e74",
+        "name": "To Write To Modbus",
+        "links": [
+            "4a373436.5fb2a4"
+        ],
+        "x": 35,
+        "y": 1800,
+        "wires": [
+            [
+                "f2b118da2078a507"
+            ]
+        ]
+    },
+    {
+        "id": "a753fd27c14bbe60",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "eff710477ec09737",
+        "name": "Set IOA name fields",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 200,
+        "y": 60,
+        "wires": [
+            [
+                "0bcf0fd773120189",
+                "38b2265da195c2e0"
+            ]
+        ]
+    },
+    {
+        "id": "0bcf0fd773120189",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "eff710477ec09737",
+        "name": "iec104_templates_solis",
+        "func": "\n/*\nIEC 60870-5-104 TypeID Summary:\n\n- T1   (M_SP_NA_1)   : Single Point Information – used for ON/OFF status indication (e.g., breaker status).\n- T13  (M_ME_NC_1)   : Measured Value, Short Floating Point – used for analog measurements such as power, voltage.\n- T30  (M_SP_TB_1)   : Single Point with Timestamp (CP56Time2a) – similar to T1 but includes a timestamp.\n- T45  (C_SC_NA_1)   : Single Command – used to control ON/OFF operations of devices.\n                        Supports Select/Execute control mode.\n- T50  (C_SE_NC_1)   : Set Point Command with Short Floating Point – used for analog control (e.g., power/voltage setting).\n                        Supports Select/Execute control mode.\n- T100 (C_IC_NA_1)   : General Interrogation Command – requests the device to send all current data points.\n- T103 (C_CS_NA_1)   : Clock Synchronization Command – synchronizes the device's internal time with the central system.\n- T105 (C_RP_NA_1)   : Reset Process Command – used to clear the device's buffer or reset internal state.\n*/\nglobal.set(\"iec104_templates\", [\n  { name: \"NM2-INV01_p_Out\", type: \"M_ME_NC_1\", address: 1, scale: 1 },\n  { name: \"NM2-INV01_p_Inv_Out\", type: \"M_ME_NC_1\", address: 2, scale: 1 },\n  { name: \"NM2-INV01_a_Inv_D1\", type: \"M_ME_NC_1\", address: 3, scale: 1 },\n  { name: \"NM2-INV01_p_Set_kW\", type: \"M_ME_NC_1\", address: 80, scale: 0.001 },\n  { name: \"NM2-INV01_p_Set_Per\", type: \"M_ME_NC_1\", address: 81, scale: 0.0002857 },\n  { name: \"NM2-INV01_p_Set_Exp_Enable\", type: \"M_SP_TB_1\", address: 82, scale: 1 },\n  // { name: \"NM2-INV01_p_Set_Total_Enable\", type: \"M_SP_TB_1\", address: 31, scale: 1 },\n  { name: \"NM2-INV01_Ua\", type: \"M_ME_NC_1\", address: 5, scale: 1 },\n  { name: \"NM2-INV01_Ub\", type: \"M_ME_NC_1\", address: 6, scale: 1 },\n  { name: \"NM2-INV01_Uc\", type: \"M_ME_NC_1\", address: 7, scale: 1 },\n  { name: \"NM2-INV01_Ia\", type: \"M_ME_NC_1\", address: 8, scale: 1 },\n  { name: \"NM2-INV01_Ib\", type: \"M_ME_NC_1\", address: 9, scale: 1 },\n  { name: \"NM2-INV01_Ic\", type: \"M_ME_NC_1\", address: 10, scale: 1 },\n  { name: \"NM2-INV01_frequency\", type: \"M_ME_NC_1\", address: 11, scale: 1 },\n  {\n    name: \"SETPOINT_Power\",\n    type: \"C_SE_NC_1\",\n    address: 13,\n    scale: 1000,\n    modbusAddress: 0,  // địa chỉ Modbus Holding Register\n    unitid: 4,           // slave ID\n    datatype: \"float\",   // hoặc int16, uint16, int32, uint32, float\n    byteOrder: \"LE\"      // hoặc \"LE\" (default là Big Endian)\n  },\n    {\n    name: \"SETPOINT_Power_Percent\",\n    type: \"C_SE_NC_1\",\n    address: 12,\n    scale: 3500,\n    modbusAddress: 0,  // địa chỉ Modbus Holding Register\n    unitid: 4,           // slave ID\n    datatype: \"float\",   // hoặc int16, uint16, int32, uint32, float\n    byteOrder: \"LE\"      // hoặc \"LE\" (default là Big Endian)\n  },\n  {\n    name: \"enable_SETPOINT_Power\",\n    type: \"C_SC_NA_1\",\n    address: 11,\n    scale: 1,\n    modbusAddress: 0,\n    unitid: 4,\n    datatype: \"bool\"\n  }\n  // ,{\n  //   name: \"enable_SETPOINT_Power_Total\",\n  //   type: \"C_SC_NA_1\",\n  //   address: 46,\n  //   scale: 4,\n  //   modbusAddress: 57344,\n  //   unitid: 1,\n  //   datatype: \"int16\",\n  //   byteOrder: \"LE\"\n  // }\n]);\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 490,
+        "y": 60,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "f2b118da2078a507",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Convert to Modbus Messages",
+        "func": "const templates = global.get(\"iec104_templates\") || [];\nconst cmd = msg.payload;\n\n// Chỉ xử lý khi là lệnh execute (bỏ qua select)\nif (cmd.action !== \"execute\") {\n    return null;\n}\n\n// Tìm mapping theo type & IOA\nconst matched = templates.find(e =>\n    e.type === cmd.type && e.address === cmd.address\n);\n\nif (!matched) {\n    node.warn(`Không tìm thấy mapping cho type ${cmd.type}, IOA ${cmd.address}`);\n    return null;\n}\n\n// ===== BOOL → FC 05 (Write Single Coil) =====\nif (matched.datatype === \"bool\" || matched.datatype === \"boolean\") {\n    // Chuẩn hoá giá trị bool (nhận true/false, 1/0, \"1\"/\"0\")\n    const b = !!(cmd.value === true || cmd.value === 1 || cmd.value === \"1\");\n\n    // Một số thiết bị yêu cầu 0xFF00 cho ON, 0x0000 cho OFF.\n    // Nếu bạn muốn dùng dạng này, thêm coilOn/coilOff vào template.\n    const coilOn  = (matched.coilOn  !== undefined) ? matched.coilOn  : 1;       // hoặc 0xFF00\n    const coilOff = (matched.coilOff !== undefined) ? matched.coilOff : 0;       // hoặc 0x0000\n\n    msg.payload = {\n        fc: 5,                                 // Write Single Coil\n        unitid: matched.unitid,\n        address: matched.modbusAddress,        // địa chỉ COIL\n        value: b ? coilOn : coilOff,            // giá trị ON/OFF\n        quantity:1\n    };\n    return msg;\n}\n\n// ===== Các kiểu số còn lại =====\nconst scale = (matched.scale != null) ? matched.scale : 1;\nlet value = Number(cmd.value) * scale;\n\nconst buf = Buffer.alloc(4); // đủ cho float32/uint32\nlet outPayload = {\n    fc: 16,\n    unitid: matched.unitid,\n    address: matched.modbusAddress,\n    quantity: 2,\n    value: []\n};\n\nswitch (matched.datatype) {\n    case \"int16\":\n    case \"uint16\":\n        outPayload.fc = 6;            // Write Single Register\n        outPayload.quantity = 1;\n        outPayload.value = Math.round(value);\n        break;\n\n    case \"int32\":\n        buf.writeInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"uint32\":\n        buf.writeUInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeUInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"float\":\n    case \"float32\":\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeFloatBE(value);\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    default:\n        node.error(\"Kiểu dữ liệu không được hỗ trợ: \" + matched.datatype);\n        return null;\n}\n\nmsg.payload = outPayload;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 1800,
+        "wires": [
+            [
+                "0e6598664013e12b"
+            ]
+        ]
+    },
+    {
+        "id": "0e6598664013e12b",
+        "type": "modbus-flex-write",
+        "z": "ddb875b696c74e74",
+        "name": "Write to INVMaster",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "server": "c29be2c98811e059",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 1050,
+        "y": 1800,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "1f3ca4b6b63ddc0f",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Convert Modbus to IEC104 template",
+        "func": "// Convert Modbus to IEC104 template (updated)\n// - Nếu msg.payload === \"invalid\"  => broadcast tất cả với QUALITY_INVALID\n// - Nếu global.modbus_online === false => mọi điểm chuyển QUALITY_INVALID\n// - Nếu online => gửi GOOD như bình thường\n\nconst iecTemplates = global.get(\"iec104_templates\") || [];\nconst slaveId = msg.slaveId || \"NM2-INV01\";\n\nconst isOnline = global.get(\"modbus_online\") !== false; // mặc định true nếu chưa set\nlet outMsgs = [];\n\n// helper\nfunction roundToDecimalPlaces(num, scale) {\n  if (scale === 0 || scale === 1 || isNaN(scale)) return num;\n  const decimals = Math.max(0, Math.round(-Math.log10(scale)));\n  return parseFloat(num.toFixed(decimals));\n}\n\n// 1) Trường hợp được yêu cầu broadcast invalid\nif (msg.payload === \"invalid\") {\n  for (let entry of iecTemplates) {\n    const key = entry.name;\n    if (!key.startsWith(slaveId + \"_\")) continue;\n    if (entry.type.startsWith(\"C_\")) continue; // bỏ các type điều khiển\n\n    outMsgs.push({\n      payload: {\n        type: entry.type,\n        address: entry.address,\n        value: 0,\n        qualifier: \"IEC60870_QUALITY_INVALID\"\n      }\n    });\n  }\n  return [outMsgs];\n}\n\n// 2) Bình thường: map giá trị → IEC104\nconst dataObj = msg.payload || {};\n\nfor (let entry of iecTemplates) {\n  const key = entry.name;\n  if (!key.startsWith(slaveId + \"_\")) continue;\n  if (entry.type.startsWith(\"C_\")) continue; // bỏ các type điều khiển\n\n  const field = key.substring(slaveId.length + 1);\n  let value = 0;\n  let qualifier = \"IEC60870_QUALITY_INVALID\";\n\n  // ưu tiên key đầy đủ, sau đó field ngắn, sau cùng tới global\n  let rawValue = dataObj[key];\n  if (typeof rawValue === \"undefined\") rawValue = dataObj[field];\n  if (typeof rawValue === \"undefined\") rawValue = global.get(key);\n\n  // Nếu offline: luôn INVALID (ghi 0 cho an toàn)\n  if (!isOnline) {\n    outMsgs.push({\n      payload: {\n        type: entry.type,\n        address: entry.address,\n        value: 0,\n        qualifier: \"IEC60870_QUALITY_INVALID\"\n      }\n    });\n    continue;\n  }\n\n  // Online: chỉ GOOD khi là số hợp lệ\n  if (typeof rawValue === \"number\" && !isNaN(rawValue)) {\n    const scale = typeof entry.scale === \"number\" ? entry.scale : 1;\n    const scaled = rawValue * scale;\n    value = roundToDecimalPlaces(scaled, scale);\n    qualifier = \"IEC60870_QUALITY_GOOD\";\n  }\n\n  outMsgs.push({\n    payload: {\n      type: entry.type,\n      address: entry.address,\n      value,\n      qualifier\n    }\n  });\n}\n\nreturn [outMsgs];\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 730,
+        "y": 1520,
+        "wires": [
+            [
+                "cd1303b68abc516b",
+                "814e21e9dc471872"
+            ]
+        ]
+    },
+    {
+        "id": "cd1303b68abc516b",
+        "type": "link out",
+        "z": "ddb875b696c74e74",
+        "name": "To IEC-Server-In",
+        "mode": "link",
+        "links": [
+            "7ce67f1.66889"
+        ],
+        "x": 955,
+        "y": 1520,
+        "wires": []
+    },
+    {
+        "id": "7186bd3898584bee",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Get Global Value",
+        "func": "// Lấy tất cả keys trong global context\nconst globalKeys = global.keys();\nconst allGlobals = {};\n\nfor (let i = 0; i < globalKeys.length; i++) {\n    const key = globalKeys[i];\n    allGlobals[key] = global.get(key);\n}\n\n\n\n// Trả ra cho debug hoặc node tiếp theo nếu cần\nmsg.payload = allGlobals;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 270,
+        "y": 1460,
+        "wires": [
+            [
+                "75db4550768a2a31"
+            ]
+        ]
+    },
+    {
+        "id": "7f9af19189d70a59",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Poll",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 110,
+        "y": 1460,
+        "wires": [
+            [
+                "7186bd3898584bee"
+            ]
+        ]
+    },
+    {
+        "id": "75db4550768a2a31",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Custom RBE",
+        "func": "// Normalize Digitals (no RBE)\n// - Không RBE, không threshold: forward toàn bộ msg.payload\n// - Các biến boolean luôn gửi, ép về 0/1\n// - Nếu thiếu biến boolean trong payload, thử lấy từ global và ép về 0/1\n\nconst digitalKeys = [\n    \"p_Set_Exp_Enable\",\n    \"p_Set_Total_Enable\"\n];\n\n// Bổ sung biến digital nếu thiếu, lấy từ global\nfor (let key of digitalKeys) {\n    const fullKey = \"NM2-INV01_\" + key;\n    if (!(fullKey in msg.payload)) {\n        const gVal = global.get(fullKey);\n        if (typeof gVal === \"boolean\" || typeof gVal === \"number\") {\n            msg.payload[fullKey] = gVal ? 1 : 0;\n        }\n    }\n}\n\n// Ép tất cả biến digital về 0/1 (nếu có trong payload)\nfor (let key of Object.keys(msg.payload)) {\n    const shortKey = key.replace(\"NM2-INV01_\", \"\");\n    if (digitalKeys.includes(shortKey)) {\n        const v = msg.payload[key];\n        msg.payload[key] = v ? 1 : 0;\n    }\n}\n\n// Không lọc gì nữa, chuyển tiếp toàn bộ\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 470,
+        "y": 1460,
+        "wires": [
+            [
+                "1f3ca4b6b63ddc0f",
+                "644c632e1c53401f"
+            ]
+        ]
+    },
+    {
+        "id": "29960765763c806a",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Template",
+        "func": "const input = msg.payload;\nconst templates = global.get(\"iec104_templates\") || [];\n\n// Hàm làm tròn theo scale\nfunction roundToDecimalPlaces(num, scale) {\n    if (scale === 0 || scale === 1 || isNaN(scale)) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(scale)));\n    return parseFloat(num.toFixed(decimals));\n}\n\n// Danh sách biến cần lấy\nconst wantedKeys = [\n    \"NM2-INV01_p_Out\",\n    \"NM2-INV01_p_Inv_Out\",\n    \"NM2-INV01_a_Inv_D1\",\n    \"NM2-INV01_Ua\",\n    \"NM2-INV01_Ub\",\n    \"NM2-INV01_Uc\",\n    \"NM2-INV01_Ia\",\n    \"NM2-INV01_Ib\",\n    \"NM2-INV01_Ic\",\n    \"NM2-INV01_frequency\",\n    \"NM2-INV01_p_Set_Per\",\n    \"NM2-INV01_p_Set_kW\",\n    \"NM2-INV01_p_Set_Exp_Enable\",\n    // \"NM2-INV01_p_Set_Total_Enable\"\n];\n\nconst result = {};\nfor (let key of wantedKeys) {\n    const template = templates.find(t => t.name === key);\n    const scale = template ? template.scale : 1;\n    const rawValue = input[key];\n\n    const scaled = rawValue * scale;\n    result[key.replace(\"NM2-INV01_\", \"\")] = roundToDecimalPlaces(scaled, scale);\n}\n\n// Gửi ra dạng SOL block\nmsg.payload = [{\n    name: \"S3Logger-VHouse-Det-TrungTien-Hanam\",\n    type: \"104_SOL\",\n    ts: Math.floor(Date.now() / 1000),\n    ...result\n}];\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 880,
+        "y": 1300,
+        "wires": [
+            [
+                "0be405639b50f857",
+                "bb49f52d41903839"
+            ]
+        ]
+    },
+    {
+        "id": "02849a6cdecb11bf",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Queue & Send Function Node 1",
+        "func": "// Check if the Internet is available (global context)\nlet internetAvailable = global.get('internetAvailable') || false;\n\n// Retrieve the queue from the global context or initialize it as an empty array\nlet queue = flow.get('queue2') || [];  // Use flow context to ensure sharing between nodes\nlet maxQueueSize = 10000;  // Reduced max queue size \n\n// Get the last queue time or initialize it\nlet lastQueueTime = flow.get('lastQueueTime') || 0;\nconst currentTime = Date.now();\nconst queueInterval =  5 * 60 * 1000; // 10 minutes in milliseconds\n// const queueInterval =  30000; //  sec in milliseconds\n// Case 1: If the queue is empty and the Internet is available, send real-time data directly\nif (internetAvailable && queue.length === 0) {\n    node.status({ fill: \"green\", shape: \"ring\", text: \"Sending Real-Time Data\" });\n    return [msg, null];  // Send real-time data to Output 1\n\n// Case 2: If Internet is not available, queue new data at a reduced rate (every 5 minutes)\n} else if (!internetAvailable) {\n    // Check if it's time to queue a new entry (5 minute interval)\n    if (currentTime - lastQueueTime >= queueInterval) {\n        // Time to queue a new entry\n        if (queue.length < maxQueueSize) {\n            queue.push(msg.payload);  // Add data to the queue\n            flow.set('queue2', queue);  // Save the updated queue in flow context\n            flow.set('lastQueueTime', currentTime);  // Update last queue time\n            \n            node.status({ \n                fill: \"yellow\", \n                shape: \"dot\", \n                text: \"Offline: Queued data (5min interval), Queue: \" + queue.length \n            });\n            \n            node.warn(\"Internet Offline: Data queued at 5min interval, Queue size: \" + queue.length);\n        } else {\n            node.warn(\"Queue size limit reached, discarding new data.\");\n            node.status({ fill: \"red\", shape: \"dot\", text: \"Queue FULL! Size: \" + queue.length });\n        }\n    } else {\n        // Skip this data point as we're within the 5-minute interval\n        node.status({ \n            fill: \"blue\", \n            shape: \"ring\", \n            text: \"Offline: Skipping data point (\" + Math.floor((queueInterval - (currentTime - lastQueueTime))/1000) + \"s until next queue)\"\n        });\n    }\n    return [null, null];  // Do nothing while in offline mode\n\n// Case 3: If there is data in the queue but Internet is available\n} else {\n    // Continue to queue new data normally while processing the backlog\n    if (queue.length < maxQueueSize) {\n        queue.push(msg.payload);  // Add data to the queue\n        flow.set('queue2', queue);  // Save the updated queue in flow context\n        \n        node.status({ fill: \"yellow\", shape: \"dot\", text: \"Queueing New Data, Queue Length: \" + queue.length });\n        node.warn(\"New Data Queued (online but processing backlog): \" + JSON.stringify(msg.payload));\n    } else {\n        node.warn(\"Queue size limit reached, discarding new data.\");\n    }\n\n    return [null, null];  // Do nothing while queuing data\n}\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 1360,
+        "wires": [
+            [
+                "29960765763c806a"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "08ed21395201f214",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Push Data When Online",
+        "props": [],
+        "repeat": "1",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 170,
+        "y": 1300,
+        "wires": [
+            [
+                "77a57c906591a945"
+            ]
+        ]
+    },
+    {
+        "id": "77a57c906591a945",
+        "type": "delay",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "pauseType": "delay",
+        "timeout": "1",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 380,
+        "y": 1300,
+        "wires": [
+            [
+                "dabdbfd1ba389f3a"
+            ]
+        ]
+    },
+    {
+        "id": "dabdbfd1ba389f3a",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Queue & Send Function Node 2",
+        "func": "// Check if the Internet is available (global context)\nlet internetAvailable = global.get('internetAvailable') || false;\n\n// Retrieve the queue from the flow context or initialize it as an empty array\nlet queue = flow.get('queue2') || [];  // Initialize the queue if it doesn't exist\nlet maxQueueSize = 10000;            // Set the maximum queue size\n\n// Case 1: Sending queued data when Internet is available and there is data in the queue\nif (internetAvailable && queue.length > 0) {\n    // Dequeue the oldest message for sending\n    let queuedMessage = queue.shift();  // Get the first message from the queue\n    flow.set('queue2', queue);  // Update the queue in context\n\n    // Send the dequeued message (if it's not null or empty)\n    if (queuedMessage) {\n        node.status({ fill: \"green\", shape: \"dot\", text: \"Sending Queued Data\" });\n        //node.warn(\"Sending Queued Data: \" + JSON.stringify(queuedMessage));\n        return [null, { payload: queuedMessage }];  // Send to output 2\n    } else {\n        //node.warn(\"Queue is empty, nothing to send.\");\n        return [null, null];  // Do nothing if the queue is empty\n    }\n} \n\n// Case 2: Internet is down, so queue new data\nelse if (!internetAvailable) {\n    node.status({ fill: \"red\", shape: \"dot\", text: \"No Internet, waiting to send queued data.\" });\n    return [null, null];  // Do nothing while the internet is down\n}\n\n// Case 3: Internet is back but queue is empty\nelse {\n    node.status({ fill: \"grey\", shape: \"ring\", text: \"Queue is empty, waiting for new data...\" });\n    return [null, null];  // Do nothing when the queue is empty\n}\n",
+        "outputs": 2,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 650,
+        "y": 1300,
+        "wires": [
+            [],
+            [
+                "29960765763c806a"
+            ]
+        ]
+    },
+    {
+        "id": "00bb107255671529",
+        "type": "ping",
+        "z": "ddb875b696c74e74",
+        "protocol": "Automatic",
+        "mode": "timed",
+        "name": "",
+        "host": "8.8.8.8",
+        "timer": "2",
+        "inputs": 0,
+        "x": 150,
+        "y": 1240,
+        "wires": [
+            [
+                "4f88f85b314cc6b0"
+            ]
+        ]
+    },
+    {
+        "id": "4f88f85b314cc6b0",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Set Internet Status",
+        "func": "if (msg.payload === false) {\n    global.set('internetAvailable', false);\n} else {\n    global.set('internetAvailable', true);\n}\n\n// Optional: Provide visual feedback in the node status\nnode.status({\n    fill: msg.payload === false ? \"red\" : \"green\",\n    shape: \"dot\",\n    text: msg.payload === false ? \"No Internet\" : \"Internet Connected\"\n});\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 1240,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "790c77584de57e8e",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Get Global Value",
+        "func": "// // Lấy tất cả keys trong global context\n// const globalKeys = global.keys();\n// const allGlobals = {};\n\n// for (let i = 0; i < globalKeys.length; i++) {\n//     const key = globalKeys[i];\n//     allGlobals[key] = global.get(key);\n// }\n\n\n\n// // Trả ra cho debug hoặc node tiếp theo nếu cần\n// msg.payload = allGlobals;\n// return msg;\n// Block khi Modbus offline\nconst online = !!global.get(\"modbus_online\");\nif (!online) {\n    node.status({ fill: \"red\", shape: \"ring\", text: \"modbus_online = false → block\" });\n    return null; // Không gửi tiếp sang Queue & Send Function Node 1\n}\n\n// Lấy tất cả keys trong global context\nconst globalKeys = global.keys();\nconst allGlobals = {};\n\nfor (let i = 0; i < globalKeys.length; i++) {\n    const key = globalKeys[i];\n    allGlobals[key] = global.get(key);\n}\n\n// Trả ra cho node kế tiếp\nnode.status({ fill: \"green\", shape: \"dot\", text: \"modbus_online = true → pass\" });\nmsg.payload = allGlobals;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 310,
+        "y": 1360,
+        "wires": [
+            [
+                "02849a6cdecb11bf"
+            ]
+        ]
+    },
+    {
+        "id": "af2be248975c2782",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Poll",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "15",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "",
+        "payloadType": "date",
+        "x": 110,
+        "y": 1360,
+        "wires": [
+            [
+                "790c77584de57e8e"
+            ]
+        ]
+    },
+    {
+        "id": "5210b23a1bae4fe4",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "debug 1",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 580,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "d175e3bbbd7cddce",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "eb7e230dd612b0e9",
+        "name": "debug 2",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 520,
+        "wires": []
+    },
+    {
+        "id": "0be405639b50f857",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 4",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1090,
+        "y": 1220,
+        "wires": []
+    },
+    {
+        "id": "814e21e9dc471872",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 6",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 930,
+        "y": 1580,
+        "wires": []
+    },
+    {
+        "id": "517c5e1762b6711d",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Daily Energy 46-47-5",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":2,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":5,\"address\":46,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 160,
+        "y": 800,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "691384a1693e0481",
+        "type": "modbus-flex-getter",
+        "z": "ddb875b696c74e74",
+        "name": "Solis S3 Logger",
+        "showStatusActivities": true,
+        "showErrors": true,
+        "showWarnings": true,
+        "logIOActivities": false,
+        "server": "c29be2c98811e059",
+        "useIOFile": false,
+        "ioFile": "",
+        "useIOForPayload": false,
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": true,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 460,
+        "y": 720,
+        "wires": [
+            [
+                "3d416dd7b958a692",
+                "58a74f033099356e"
+            ],
+            []
+        ]
+    },
+    {
+        "id": "db75cf1bc00091ea",
+        "type": "buffer-parser",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "data": "payload",
+        "dataType": "msg",
+        "specification": "spec",
+        "specificationType": "ui",
+        "items": [
+            {
+                "type": "floatle",
+                "name": "p_Out",
+                "offset": 0,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "p_Inv_Out",
+                "offset": 4,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "a_Inv_D",
+                "offset": 8,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "bool",
+                "name": "p_Set_Exp_Enable",
+                "offset": 16,
+                "length": 1,
+                "offsetbit": 0,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "p_Set_kW",
+                "offset": 12,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "p_Set_Per",
+                "offset": 12,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Ua",
+                "offset": 32,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Ub",
+                "offset": 36,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Uc",
+                "offset": 40,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Ia",
+                "offset": 44,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Ib",
+                "offset": 48,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "Ic",
+                "offset": 52,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            },
+            {
+                "type": "floatle",
+                "name": "frequency",
+                "offset": 56,
+                "length": 1,
+                "offsetbit": 1,
+                "scale": "1",
+                "mask": ""
+            }
+        ],
+        "swap1": "swap16",
+        "swap2": "",
+        "swap3": "",
+        "swap1Type": "swap",
+        "swap2Type": "swap",
+        "swap3Type": "swap",
+        "msgProperty": "payload",
+        "msgPropertyType": "str",
+        "resultType": "keyvalue",
+        "resultTypeType": "return",
+        "multipleResult": false,
+        "fanOutMultipleResult": false,
+        "setTopic": true,
+        "outputs": 1,
+        "x": 1070,
+        "y": 720,
+        "wires": [
+            [
+                "fbb98bf59135ec6f",
+                "418c330b2e06d79d"
+            ]
+        ]
+    },
+    {
+        "id": "fbb98bf59135ec6f",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 43",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1240,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "aef15ea8170dbcdc",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Pinv-out -32-33-5",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":1,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":5,\"address\":32,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 760,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "015252968d483dc1",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Pout -38-39-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":0,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":38,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 140,
+        "y": 720,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "3d416dd7b958a692",
+        "type": "join",
+        "z": "ddb875b696c74e74",
+        "name": "JoinSlave",
+        "mode": "custom",
+        "build": "object",
+        "property": "payload",
+        "propertyType": "msg",
+        "key": "parts.index",
+        "joiner": "\\n",
+        "joinerType": "str",
+        "useparts": true,
+        "accumulate": false,
+        "timeout": "10",
+        "count": "12",
+        "reduceRight": false,
+        "reduceExp": "",
+        "reduceInit": "",
+        "reduceInitType": "",
+        "reduceFixup": "",
+        "x": 650,
+        "y": 720,
+        "wires": [
+            [
+                "b484e225a1141ec0"
+            ]
+        ]
+    },
+    {
+        "id": "b484e225a1141ec0",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Process Data",
+        "func": "msg.payload = [].concat(...Object.values(msg.payload));\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 860,
+        "y": 720,
+        "wires": [
+            [
+                "db75cf1bc00091ea"
+            ]
+        ]
+    },
+    {
+        "id": "fc152b19bb0bed1d",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Enable/disable Limit 0 - 4 fc1",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":4,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":1,\"unitid\":4,\"address\":0,\"quantity\":1}",
+        "payloadType": "json",
+        "x": 190,
+        "y": 840,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "5a16c699709d5254",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Limit Export kW - 0-1 -4 fc3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":3,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":4,\"address\":0,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 180,
+        "y": 880,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "418c330b2e06d79d",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Global context",
+        "func": "const templates = global.get(\"iec104_templates\") || [];\nconst allowed = new Set(templates.map(t => t.name));\nallowed.add(\"NM2-INV01_a_Inv_D\");\nfor (let key in msg.payload) {\n    const fullKey = \"NM2-INV01_\" + key;\n    if (allowed.has(fullKey)) {\n        global.set(fullKey, msg.payload[key]);\n    }\n}\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1260,
+        "y": 720,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "831f2d315e46eda1",
+        "type": "comment",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "info": "const templates = global.get(\"iec104_templates\") || [];\nconst cmd = msg.payload;\n\n// Bỏ qua nếu action không phải là \"execute\"\nif (cmd.action !== \"execute\") {\n    return null;\n}\n\nconst matched = templates.find(e =>\n    e.type === cmd.type && e.address === cmd.address\n);\n\nif (!matched) {\n    node.warn(`Không tìm thấy mapping cho type ${cmd.type}, IOA ${cmd.address}`);\n    return null;\n}\n\nconst scale = matched.scale || 1;\nlet value = cmd.value * scale;\n\nconst buf = Buffer.alloc(4); // Đủ cho float32 hoặc uint32\n\nlet outPayload = {\n    fc: 16,\n    unitid: matched.unitid,\n    address: matched.modbusAddress,\n    quantity: 2,\n    value: []\n};\n\nswitch (matched.datatype) {\n    case \"int16\":\n    case \"uint16\":\n        outPayload.fc = 6;\n        outPayload.quantity = 1;\n        outPayload.value = Math.round(value);\n        break;\n\n    case \"int32\":\n        buf.writeInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [\n                buf.readUInt16LE(2), // high word\n                buf.readUInt16LE(0)  // low word\n            ];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [\n                buf.readUInt16LE(0),\n                buf.readUInt16LE(2)\n            ];\n        } else {\n            buf.writeInt32BE(Math.round(value));\n            outPayload.value = [\n                buf.readUInt16BE(0),\n                buf.readUInt16BE(2)\n            ];\n        }\n        break;\n\n    case \"uint32\":\n        buf.writeUInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [\n                buf.readUInt16LE(2), // high word\n                buf.readUInt16LE(0)  // low word\n            ];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [\n                buf.readUInt16LE(0),\n                buf.readUInt16LE(2)\n            ];\n        } else {\n            buf.writeUInt32BE(Math.round(value));\n            outPayload.value = [\n                buf.readUInt16BE(0),\n                buf.readUInt16BE(2)\n            ];\n        }\n        break;\n\n    case \"float\":\n    case \"float32\":\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [\n                buf.readUInt16LE(2),\n                buf.readUInt16LE(0)\n            ];\n        } else if (matched.byteOrder === \"LE\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [\n                buf.readUInt16LE(0),\n                buf.readUInt16LE(2)\n            ];\n        } else {\n            buf.writeFloatBE(value);\n            outPayload.value = [\n                buf.readUInt16BE(0),\n                buf.readUInt16BE(2)\n            ];\n        }\n        break;\n\n    default:\n        node.error(\"Kiểu dữ liệu không được hỗ trợ: \" + matched.datatype);\n        return null;\n}\n\nmsg.payload = outPayload;\nreturn msg;\n",
+        "x": 660,
+        "y": 1860,
+        "wires": []
+    },
+    {
+        "id": "584a943cdc02bfd8",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Ua - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":5,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":0,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 920,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "2a62bc0e02344878",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Ub - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":6,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":2,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 960,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "f6856a686b0ab72b",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Uc - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":7,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":4,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 1000,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "40b8ac1b91e34aaf",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Ia - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":8,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":6,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 120,
+        "y": 1040,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "92cfb8915a4b37ac",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Ib - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":9,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":8,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 120,
+        "y": 1080,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "6401f193c9c17551",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Ic - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":10,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":10,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 120,
+        "y": 1120,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "3b5b66538b58e3e4",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Frequency - ID-3",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "parts",
+                "v": "{\"id\":\"joinGroup1\",\"index\":11,\"count\":12,\"type\":\"array\"}",
+                "vt": "json"
+            }
+        ],
+        "repeat": "5",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"fc\":3,\"unitid\":3,\"address\":12,\"quantity\":2}",
+        "payloadType": "json",
+        "x": 150,
+        "y": 1160,
+        "wires": [
+            [
+                "691384a1693e0481"
+            ]
+        ]
+    },
+    {
+        "id": "38b2265da195c2e0",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "d": true,
+        "g": "eff710477ec09737",
+        "name": "iec104_templates_UdataSvrTest",
+        "func": "\n/*\nIEC 60870-5-104 TypeID Summary:\n\n- T1   (M_SP_NA_1)   : Single Point Information – used for ON/OFF status indication (e.g., breaker status).\n- T13  (M_ME_NC_1)   : Measured Value, Short Floating Point – used for analog measurements such as power, voltage.\n- T30  (M_SP_TB_1)   : Single Point with Timestamp (CP56Time2a) – similar to T1 but includes a timestamp.\n- T45  (C_SC_NA_1)   : Single Command – used to control ON/OFF operations of devices.\n                        Supports Select/Execute control mode.\n- T50  (C_SE_NC_1)   : Set Point Command with Short Floating Point – used for analog control (e.g., power/voltage setting).\n                        Supports Select/Execute control mode.\n- T100 (C_IC_NA_1)   : General Interrogation Command – requests the device to send all current data points.\n- T103 (C_CS_NA_1)   : Clock Synchronization Command – synchronizes the device's internal time with the central system.\n- T105 (C_RP_NA_1)   : Reset Process Command – used to clear the device's buffer or reset internal state.\n*/\nglobal.set(\"iec104_templates\", [\n  { name: \"NM2-INV01_p_Out\", type: \"M_ME_NC_1\", address: 1, scale: 1 },\n  { name: \"NM2-INV01_p_Inv_Out\", type: \"M_ME_NC_1\", address: 2, scale: 1 },\n  { name: \"NM2-INV01_a_Inv_D1\", type: \"M_ME_NC_1\", address: 3, scale: 1 },\n  { name: \"NM2-INV01_p_Set_kW\", type: \"M_ME_NC_1\", address: 80, scale: 0.001 },\n  { name: \"NM2-INV01_p_Set_Per\", type: \"M_ME_NC_1\", address: 81, scale: 0.0002857142857142857 },\n  { name: \"NM2-INV01_p_Set_Exp_Enable\", type: \"M_SP_NA_1\", address: 82, scale: 1 },\n  // { name: \"NM2-INV01_p_Set_Total_Enable\", type: \"M_SP_TB_1\", address: 31, scale: 1 },\n  { name: \"NM2-INV01_Ua\", type: \"M_ME_NC_1\", address: 5, scale: 1 },\n  { name: \"NM2-INV01_Ub\", type: \"M_ME_NC_1\", address: 6, scale: 1 },\n  { name: \"NM2-INV01_Uc\", type: \"M_ME_NC_1\", address: 7, scale: 1 },\n  { name: \"NM2-INV01_Ia\", type: \"M_ME_NC_1\", address: 8, scale: 1 },\n  { name: \"NM2-INV01_Ib\", type: \"M_ME_NC_1\", address: 9, scale: 1 },\n  { name: \"NM2-INV01_Ic\", type: \"M_ME_NC_1\", address: 10, scale: 1 },\n  // { name: \"NM2-INV01_frequency\", type: \"M_ME_NC_1\", address: 9, scale: 0.01 },\n  {\n    name: \"SETPOINT_Power\",\n    type: \"C_SE_NC_1\",\n    address: 13,\n    scale: 1000,\n    modbusAddress: 14,  // địa chỉ Modbus Holding Register\n    unitid: 5,           // slave ID\n    datatype: \"float\",   // hoặc int16, uint16, int32, uint32, float\n    byteOrder: \"LE\"      // hoặc \"LE\" (default là Big Endian)\n  },\n    {\n    name: \"SETPOINT_Power_Percent\",\n    type: \"C_SE_NC_1\",\n    address: 12,\n    scale: 3500,\n    modbusAddress: 14,  // địa chỉ Modbus Holding Register\n    unitid: 5,           // slave ID\n    datatype: \"float\",   // hoặc int16, uint16, int32, uint32, float\n    byteOrder: \"LE\"      // hoặc \"LE\" (default là Big Endian)\n  },\n  {\n    name: \"enable_SETPOINT_Power\",\n    type: \"C_SC_NA_1\",\n    address: 11,\n    scale: 1,\n    modbusAddress: 0,\n    unitid: 5,\n    datatype: \"bool\"\n  }\n  // ,{\n  //   name: \"enable_SETPOINT_Power_Total\",\n  //   type: \"C_SC_NA_1\",\n  //   address: 46,\n  //   scale: 4,\n  //   modbusAddress: 57344,\n  //   unitid: 1,\n  //   datatype: \"int16\",\n  //   byteOrder: \"LE\"\n  // }\n]);\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 510,
+        "y": 100,
+        "wires": [
+            []
+        ]
+    },
+    {
+        "id": "2a5f8150ecd7b743",
+        "type": "modbus-flex-write",
+        "z": "ddb875b696c74e74",
+        "name": "Write to INVMaster",
+        "showStatusActivities": false,
+        "showErrors": false,
+        "showWarnings": true,
+        "server": "c29be2c98811e059",
+        "emptyMsgOnFail": false,
+        "keepMsgProperties": false,
+        "delayOnStart": false,
+        "startDelayTime": "",
+        "x": 1050,
+        "y": 1860,
+        "wires": [
+            [],
+            []
+        ]
+    },
+    {
+        "id": "fa8ba4d2493fc0cd",
+        "type": "status",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "scope": [
+            "691384a1693e0481"
+        ],
+        "x": 100,
+        "y": 1520,
+        "wires": [
+            [
+                "75b24456c22768f8"
+            ]
+        ]
+    },
+    {
+        "id": "7fcd2ab578e86499",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "d": true,
+        "name": "Status → Online Flag",
+        "func": "// Status → Online Flag\n// Input: msg.status.text (từ node status)\n// Tác dụng: set global flag và kích \"invalid\" khi offline\nconst t = (msg.status && msg.status.text) ? String(msg.status.text).toLowerCase() : \"\";\n\nif (t.includes(\"reconnecting\") || t === \"initialize\") {\n    global.set(\"modbus_online\", false);\n    // đẩy 1 bản tin \"invalid\" để Convert node phát IEC60870_QUALITY_INVALID\n    return { payload: \"invalid\" };\n}\n\n// Khi kết nối lại, bật cờ online. (Không cần phát gì)\nif (t.includes(\"connected\") || t.includes(\"active\")) {\n    global.set(\"modbus_online\", true);\n}\n\nreturn null;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 1640,
+        "wires": [
+            [
+                "1f3ca4b6b63ddc0f"
+            ]
+        ]
+    },
+    {
+        "id": "9c2eebf1f4343d6f",
+        "type": "comment",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "info": "const iecTemplates = global.get(\"iec104_templates\") || [];\nconst slaveId = msg.slaveId || \"NM2-INV01\";  // hoặc msg.topic2 nếu có\n\nlet outMsgs = [];\n\n// Nếu payload là 'invalid' → gửi toàn bộ IOA báo lỗi (chỉ analog/status)\nif (msg.payload === \"invalid\") {\n    for (let entry of iecTemplates) {\n        const key = entry.name;\n        if (!key.startsWith(slaveId + \"_\")) continue;\n\n        // Bỏ qua các Type điều khiển (Command)\n        if (entry.type.startsWith(\"C_\")) continue;\n\n        outMsgs.push({\n            payload: {\n                type: entry.type,\n                address: entry.address,\n                value: 0,\n                qualifier: \"IEC60870_QUALITY_INVALID\"\n            }\n        });\n    }\n\n    return [outMsgs];\n}\n\n\n\nconst dataObj = msg.payload;\n\n// Hàm phụ trợ làm tròn\nfunction roundToDecimalPlaces(num, scale) {\n    if (scale === 0 || scale === 1 || isNaN(scale)) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(scale)));\n    return parseFloat(num.toFixed(decimals));\n}\n\n\n// Xử lý từng dòng template\nfor (let entry of iecTemplates) {\n    const key = entry.name;\n    if (!key.startsWith(slaveId + \"_\")) continue;\n    if (entry.type.startsWith(\"C_\")) continue;\n\n    const field = key.substring(slaveId.length + 1);\n\n    let value = 0;\n    let qualifier = \"IEC60870_QUALITY_INVALID\";\n\n    //  Ưu tiên lấy giá trị theo key đầy đủ\n    let rawValue = dataObj[key];\n\n    if (typeof rawValue === \"undefined\") {\n        rawValue = dataObj[field]; // fallback nếu RBE trả về dạng rút gọn\n    }\n\n    if (typeof rawValue === \"undefined\") {\n        rawValue = global.get(key); // fallback cuối cùng\n    }\n\n    if (typeof rawValue === \"number\" && !isNaN(rawValue)) {\n        const scale = typeof entry.scale === \"number\" ? entry.scale : 1;\n        const scaled = rawValue * scale;\n        value = roundToDecimalPlaces(scaled, scale);\n        qualifier = \"IEC60870_QUALITY_GOOD\";\n    }\n\n    outMsgs.push({\n        payload: {\n            type: entry.type,\n            address: entry.address,\n            value: value,\n            qualifier: qualifier\n        }\n    });\n}\n\nreturn [outMsgs];",
+        "x": 700,
+        "y": 1560,
+        "wires": []
+    },
+    {
+        "id": "7d14b4ac66edd3ca",
+        "type": "status",
+        "z": "ddb875b696c74e74",
+        "d": true,
+        "name": "",
+        "scope": [
+            "bed5666a7ba13260"
+        ],
+        "x": 100,
+        "y": 1640,
+        "wires": [
+            [
+                "7fcd2ab578e86499"
+            ]
+        ]
+    },
+    {
+        "id": "bb49f52d41903839",
+        "type": "mqtt out",
+        "z": "ddb875b696c74e74",
+        "name": "det-chung-tien-vhouse-hanam",
+        "topic": "tichhop-vhouse/pms/tichhop-vhouse/det-chungtien",
+        "qos": "",
+        "retain": "",
+        "respTopic": "",
+        "contentType": "",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "1b7a07d086ec7819",
+        "x": 1190,
+        "y": 1300,
+        "wires": []
+    },
+    {
+        "id": "75b24456c22768f8",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Status → Online Flag",
+        "func": "// 🟢 Status → Online Flag\n// Input: msg.status.text (từ node status)\n// Tác dụng: set global flag và phát trạng thái modbus_online\n\nconst t = (msg.status && msg.status.text) ? String(msg.status.text).toLowerCase() : \"\";\nlet output = null;\n\nif (t.includes(\"reconnecting\") || t === \"initialize\") {\n    global.set(\"modbus_online\", false);\n    node.status({ fill: \"red\", shape: \"dot\", text: \"Modbus offline\" });\n    // Đẩy bản tin invalid để Convert node phát IEC60870_QUALITY_INVALID\n    output = { payload: \"invalid\", modbus_online: false };\n}\nelse if (t.includes(\"connected\") || t.includes(\"active\")) {\n    global.set(\"modbus_online\", true);\n    node.status({ fill: \"green\", shape: \"dot\", text: \"Modbus online\" });\n    // Phát trạng thái online\n    output = { payload: \"online\", modbus_online: true };\n}\nelse {\n    // Các trạng thái khác, không thay đổi global nhưng vẫn hiển thị trạng thái hiện tại\n    const online = global.get(\"modbus_online\") || false;\n    node.status({ fill: online ? \"green\" : \"red\", shape: \"ring\", text: online ? \"Modbus online\" : \"Modbus offline\" });\n    output = { payload: \"status-check\", modbus_online: online };\n}\n\nreturn output;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 340,
+        "y": 1520,
+        "wires": [
+            [
+                "1f3ca4b6b63ddc0f"
+            ]
+        ]
+    },
+    {
+        "id": "1f8f23a9abdc8796",
+        "type": "ping",
+        "z": "ddb875b696c74e74",
+        "protocol": "IPv4",
+        "mode": "timed",
+        "name": "",
+        "host": "10.21.10.65",
+        "timer": "1",
+        "inputs": 0,
+        "x": 510,
+        "y": 920,
+        "wires": [
+            [
+                "f119adecf8c8ed40"
+            ]
+        ]
+    },
+    {
+        "id": "f119adecf8c8ed40",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 5",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 540,
+        "y": 860,
+        "wires": []
+    },
+    {
+        "id": "snap_inject_2359",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Snapshot a_Inv_D @23:59",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "00 22 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"snapshot\":true}",
+        "payloadType": "json",
+        "x": 680,
+        "y": 1020,
+        "wires": [
+            [
+                "snap_func_aInvD"
+            ]
+        ]
+    },
+    {
+        "id": "snap_func_aInvD",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "name": "Save a_Inv_D → a_Inv_D1 (global, persistent)",
+        "func": "// Save a_Inv_D → a_Inv_D1 (global, persistent)\n// Input:\n//  - Inject manual: đặt payload là số -> dùng số này làm a_Inv_D1.\n//  - Inject 23:59: không gửi số -> fallback dùng global('NM2-INV01_a_Inv_D').\n// Lưu persistent vào global store 'default'. Không phát msg ra sau.\n\nconst CUR_KEY  = \"NM2-INV01_a_Inv_D\";   // giá trị hiện tại trong ngày\nconst SNAP_KEY = \"NM2-INV01_a_Inv_D1\";  // snapshot cần lưu\nconst STORE    = \"default\";\n\nconst toNum = v => {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : NaN;\n};\n\nlet val = toNum(msg.payload);\nif (Number.isNaN(val)) {\n  val = toNum(global.get(CUR_KEY, STORE)); // fallback từ global hiện tại\n}\n\nif (!Number.isNaN(val)) {\n  global.set(SNAP_KEY, val, STORE);\n  global.set(`${SNAP_KEY}_ts`, Date.now(), STORE);\n  node.status({ fill: \"green\", shape: \"dot\", text: `${SNAP_KEY}=${val}` });\n} else {\n  node.status({ fill: \"red\", shape: \"ring\", text: `No numeric for ${SNAP_KEY}` });\n}\n\nreturn null;\n",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 1020,
+        "y": 1020,
+        "wires": [
+            [
+                "79621e8d924aed8f"
+            ]
+        ]
+    },
+    {
+        "id": "79621e8d924aed8f",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 9",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1280,
+        "y": 1020,
+        "wires": []
+    },
+    {
+        "id": "inj_nm2_d1",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "name": "Set NM2-INV01_a_Inv_D1 (manual)",
+        "props": [
+            {
+                "p": "payload"
+            },
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "manual/NM2-INV01_a_Inv_D1",
+        "payload": "656.2",
+        "payloadType": "num",
+        "x": 680,
+        "y": 1120,
+        "wires": [
+            [
+                "snap_func_aInvD"
+            ]
+        ]
+    },
+    {
+        "id": "46f72eb8a994782f",
+        "type": "comment",
+        "z": "ddb875b696c74e74",
+        "name": "",
+        "info": "// CHỈNH KEY NÀY nếu bạn đang đặt tên khác trong global\nconst CUR_KEY = \"NM2-INV01_a_Inv_D\";   // a_Inv_D hiện tại (global cuối flow của bạn)\nconst SNAP_KEY = \"NM2-INV01_a_Inv_D1\";  // a_Inv_D1 cho ngày hôm trước (global)\n\nconst val = global.get(CUR_KEY);\nif (typeof val === \"number\" && !isNaN(val)) {\n    global.set(SNAP_KEY, val); // mặc định localfilesystem → bền qua reboot\n    node.status({ fill: \"green\", shape: \"dot\", text: `a_Inv_D1=${val.toFixed(3)}` });\n    // tuỳ chọn: phát ra message để log/hiển thị\n    msg.payload = { a_Inv_D1: val, note: \"snapshot 23:59\" };\n    return msg;\n} else {\n    node.status({ fill: \"red\", shape: \"ring\", text: `No ${CUR_KEY} in global` });\n    return null;\n}\n",
+        "x": 960,
+        "y": 960,
+        "wires": []
+    },
+    {
+        "id": "f53d71d1c74036aa",
+        "type": "sqlite",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "mydb": "27a071c15915ef14",
+        "sqlquery": "msg.topic",
+        "sql": "INSERT INTO ipsec_log (\n  ts_local, ts_utc, peer, local_id, remote_id,\n  local_subnet, remote_subnet, sa_up, sa_connecting,\n  ike_sa_id, child_sa_id, ike_reauth_in, child_rekey_in,\n  bytes_in, pkts_in, age_in, bytes_out, pkts_out, age_out\n)\nVALUES (\n  $ts_local,$ts_utc,$peer,$local_id,$remote_id,\n  $local_subnet,$remote_subnet,$sa_up,$sa_connecting,\n  $ike_sa_id,$child_sa_id,$ike_reauth_in,$child_rekey_in,\n  $bytes_in,$pkts_in,$age_in,$bytes_out,$pkts_out,$age_out\n)\n",
+        "name": "Write ipsec.db",
+        "x": 980,
+        "y": 2120,
+        "wires": [
+            [
+                "7e1df5a8c48c51a9"
+            ]
+        ]
+    },
+    {
+        "id": "750a311c3781bd63",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Check",
+        "func": "// Parse strongSwan `ipsec statusall` text in msg.payload\nconst text = String(msg.payload || \"\");\n\n// Helper: escape regex\nconst escRe = s => s.replace(/[-/\\\\^$*+?.()|[\\]{}]/g, \"\\\\$&\");\n\n// --- Connection name (lấy từ phần Connections) ---\nlet conn = null;\n{\n  const mConn = text.match(/Connections:\\s*?\\n\\s{2}([A-Za-z0-9._-]+):\\s+%any/m);\n  if (mConn) conn = mConn[1];\n  else {\n    // Fallback: dòng bất kỳ có dạng \"  name:  %any\"\n    const mAlt = text.match(/\\n\\s{2}([A-Za-z0-9._-]+):\\s+%any/m);\n    if (mAlt) conn = mAlt[1];\n  }\n}\n\n// --- Local/Remote IDs ---\nconst mLocal = text.match(/local:\\s+\\[([^\\]]+)\\]/);\nconst mRemote = text.match(/remote:\\s+\\[([^\\]]+)\\]/);\n\n// --- Local/Remote subnets ---\nconst mChild = text.match(/child:\\s+([0-9a-fA-F.:/]+)\\s+===\\s+([0-9a-fA-F.:/]+)/);\n\n// --- SA counts ---\nconst mSAs = text.match(/Security Associations \\((\\d+)\\s+up,\\s+(\\d+)\\s+connecting\\)/);\n\n// --- IKE SA id [..] & CHILD SA id {..} ---\nlet ikeId = null, childId = null;\nif (conn) {\n  const reIke = new RegExp(\"\\\\b\" + escRe(conn) + \"\\\\[(\\\\d+)\\\\]:\");\n  const reChild = new RegExp(\"\\\\b\" + escRe(conn) + \"\\\\{(\\\\d+)\\\\}:\");\n  const mIke = text.match(reIke);\n  const mChildId = text.match(reChild);\n  ikeId = mIke ? Number(mIke[1]) : null;\n  childId = mChildId ? Number(mChildId[1]) : null;\n}\n\n// --- Reauthentication remaining (IKE line) ---\nlet ike_reauth_in = null;\nif (conn && ikeId != null) {\n  const reIkeLine = new RegExp(\"\\\\b\" + escRe(conn) + \"\\\\[\" + ikeId + \"\\\\]\\\\:[\\\\s\\\\S]*?reauthentication in ([^,\\\\n]+)\", \"i\");\n  const mReauth = text.match(reIkeLine);\n  ike_reauth_in = mReauth ? mReauth[1].trim() : null;\n}\n\n// --- Rekeying remaining (CHILD line)---\nlet child_rekey_in = null;\nif (conn && childId != null) {\n  const reChildLine = new RegExp(\"\\\\b\" + escRe(conn) + \"\\\\{\" + childId + \"\\\\}\\\\:[\\\\s\\\\S]*?rekeying in ([^,\\\\n]+)\", \"i\");\n  const mRekey = text.match(reChildLine);\n  child_rekey_in = mRekey ? mRekey[1].trim() : null;\n}\n\n// --- Traffic: bytes_i / bytes_o, pkts, ages (tách riêng in/out) ---\nconst mIn = text.match(/(\\d+)\\s+bytes_i\\s+\\((\\d+)\\s+pkts,\\s*([^)]+)\\)/i);\nconst mOut = text.match(/(\\d+)\\s+bytes_o\\s+\\((\\d+)\\s+pkts,\\s*([^)]+)\\)/i);\n\nconst bytes_in = mIn ? Number(mIn[1]) : null;\nconst pkts_in = mIn ? Number(mIn[2]) : null;\nconst age_in = mIn ? mIn[3].trim() : null;\n\nconst bytes_out = mOut ? Number(mOut[1]) : null;\nconst pkts_out = mOut ? Number(mOut[2]) : null;\nconst age_out = mOut ? mOut[3].trim() : null;\n\n// --- Build payload ---\nmsg.payload = {\n  conn_name: conn || null,\n  local_id: mLocal ? mLocal[1] : null,\n  remote_id: mRemote ? mRemote[1] : null,\n  local_subnet: mChild ? mChild[1] : null,\n  remote_subnet: mChild ? mChild[2] : null,\n  sa_up: mSAs ? Number(mSAs[1]) : null,\n  sa_connecting: mSAs ? Number(mSAs[2]) : null,\n  ike_sa_id: ikeId,\n  child_sa_id: childId,\n  ike_reauth_in,       // ví dụ: \"3 hours\"\n  child_rekey_in,      // ví dụ: \"19 minutes\"\n  bytes_in, pkts_in, age_in,\n  bytes_out, pkts_out, age_out\n};\n\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 450,
+        "y": 2120,
+        "wires": [
+            [
+                "b74fec2a4c81436b"
+            ]
+        ]
+    },
+    {
+        "id": "69541dc46210de30",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "5 mins trigger",
+        "props": [],
+        "repeat": "300",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 160,
+        "y": 2120,
+        "wires": [
+            [
+                "ca7a6453af983d97"
+            ]
+        ]
+    },
+    {
+        "id": "ca7a6453af983d97",
+        "type": "exec",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "command": "sudo ipsec statusall",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "3",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 325,
+        "y": 2120,
+        "wires": [
+            [
+                "750a311c3781bd63"
+            ],
+            [],
+            []
+        ],
+        "l": false
+    },
+    {
+        "id": "b74fec2a4c81436b",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "convert to SQlite code",
+        "func": "// Convert IPsec JSON -> INSERT trực tiếp (Via msg.topic, KHÔNG dùng params)\n// Lưu ý: có escape chuỗi để tránh lỗi khi có dấu nháy đơn.\n\nfunction q(v) { // quote string or NULL\n  if (v === undefined || v === null || v === '') return 'NULL';\n  return `'${String(v).replace(/'/g, \"''\")}'`;\n}\nfunction n(v) { // number or NULL\n  if (v === undefined || v === null || v === '') return 'NULL';\n  const num = Number(v);\n  return Number.isFinite(num) ? String(num) : 'NULL';\n}\n\n// Parse payload\nconst raw = (typeof msg.payload === 'string')\n  ? (() => { try { return JSON.parse(msg.payload); } catch (e) { return {}; } })()\n  : (msg.payload || {});\n\n// Chuẩn hoá trường\nconst v = {\n  peer:           raw.conn_name ?? raw.peer ?? null,\n  local_id:       raw.local_id ?? null,\n  remote_id:      raw.remote_id ?? null,\n  local_subnet:   raw.local_subnet ?? null,\n  remote_subnet:  raw.remote_subnet ?? null,\n  sa_up:          raw.sa_up,\n  sa_connecting:  raw.sa_connecting,\n  ike_sa_id:      raw.ike_sa_id,\n  child_sa_id:    raw.child_sa_id,\n  ike_reauth_in:  raw.ike_reauth_in ?? null,\n  child_rekey_in: raw.child_rekey_in ?? null,\n  bytes_in:       raw.bytes_in,\n  pkts_in:        raw.pkts_in,\n  age_in:         raw.age_in ?? null,\n  bytes_out:      raw.bytes_out,\n  pkts_out:       raw.pkts_out,\n  age_out:        raw.age_out ?? null\n};\n\n// Timestamp kiểu bạn đang dùng\nconst now = Date.now(), tz = 7*3600*1000;\nconst ts_utc   = new Date(now).toISOString();                               // UTC ISO\nconst ts_local = new Date(now + tz).toISOString().replace('Z', '+07:00');   // ISO +07:00\n\n// Build SQL gán trực tiếp vào msg.topic\nmsg.topic = `\nINSERT INTO ipsec_log (\n  ts_local, ts_utc,\n  peer, local_id, remote_id,\n  local_subnet, remote_subnet,\n  sa_up, sa_connecting,\n  ike_sa_id, child_sa_id,\n  ike_reauth_in, child_rekey_in,\n  bytes_in, pkts_in, age_in,\n  bytes_out, pkts_out, age_out\n) VALUES (\n  ${q(ts_local)}, ${q(ts_utc)},\n  ${q(v.peer)}, ${q(v.local_id)}, ${q(v.remote_id)},\n  ${q(v.local_subnet)}, ${q(v.remote_subnet)},\n  ${n(v.sa_up)}, ${n(v.sa_connecting)},\n  ${n(v.ike_sa_id)}, ${n(v.child_sa_id)},\n  ${q(v.ike_reauth_in)}, ${q(v.child_rekey_in)},\n  ${n(v.bytes_in)}, ${n(v.pkts_in)}, ${q(v.age_in)},\n  ${n(v.bytes_out)}, ${n(v.pkts_out)}, ${q(v.age_out)}\n);\n`;\n\n// (Tùy chọn) hiển thị preview_sql cho dễ debug\nmsg.preview_sql = msg.topic;\n\nnode.status({ fill: \"green\", shape: \"dot\", text: `INSERT ${v.peer || ''}` });\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 680,
+        "y": 2120,
+        "wires": [
+            [
+                "f53d71d1c74036aa"
+            ]
+        ]
+    },
+    {
+        "id": "9a0209888f16b91a",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Create Table ipsec_log",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "CREATE TABLE IF NOT EXISTS ipsec_log (   ts_local TEXT NOT NULL,   ts_utc   TEXT NOT NULL,   peer     TEXT,   local_id TEXT,   remote_id TEXT,   local_subnet TEXT,   remote_subnet TEXT,   sa_up INTEGER,   sa_connecting INTEGER,   ike_sa_id INTEGER,   child_sa_id INTEGER,   ike_reauth_in TEXT,   child_rekey_in TEXT,   bytes_in INTEGER,   pkts_in INTEGER,   age_in TEXT,   bytes_out INTEGER,   pkts_out INTEGER,   age_out TEXT );",
+        "x": 740,
+        "y": 2020,
+        "wires": [
+            [
+                "f53d71d1c74036aa"
+            ]
+        ]
+    },
+    {
+        "id": "02616c457a5be7c0",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Latest row",
+        "func": "// Latest row (ưu tiên theo ts_utc rồi ts_local)\nmsg.topic = `\nSELECT *\nFROM ipsec_log\nORDER BY ts_utc DESC, ts_local DESC, rowid DESC\nLIMIT 1;\n`;\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 2200,
+        "wires": [
+            [
+                "80619d8e1c379922"
+            ]
+        ]
+    },
+    {
+        "id": "e7b116305d975172",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Get latest row",
+        "props": [],
+        "repeat": "300",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 160,
+        "y": 2200,
+        "wires": [
+            [
+                "02616c457a5be7c0"
+            ]
+        ]
+    },
+    {
+        "id": "80619d8e1c379922",
+        "type": "sqlite",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "mydb": "27a071c15915ef14",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "Read ipsec.db",
+        "x": 520,
+        "y": 2200,
+        "wires": [
+            [
+                "2388109e9cc6ee5b",
+                "0030978895b252c7"
+            ]
+        ]
+    },
+    {
+        "id": "d5b0b70f092b6be4",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Find Table",
+        "func": "msg.topic = \"SELECT name FROM sqlite_master WHERE type='table';\";\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 330,
+        "y": 2320,
+        "wires": [
+            [
+                "f508233c5361c036"
+            ]
+        ]
+    },
+    {
+        "id": "cb7ea82ba00fa75f",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 130,
+        "y": 2320,
+        "wires": [
+            [
+                "d5b0b70f092b6be4"
+            ]
+        ]
+    },
+    {
+        "id": "aa44e873e5772eb1",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Find Row",
+        "func": "msg.topic = \"SELECT COUNT(*) AS n FROM ipsec_log;\";\nreturn msg;\n",
+        "outputs": 1,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 320,
+        "y": 2360,
+        "wires": [
+            [
+                "49307f1f5dfd4b82"
+            ]
+        ]
+    },
+    {
+        "id": "bee7adef3042ec11",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "",
+        "props": [],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "x": 130,
+        "y": 2360,
+        "wires": [
+            [
+                "aa44e873e5772eb1"
+            ]
+        ]
+    },
+    {
+        "id": "334b658fc7bbd98a",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Delete Over 7 Days",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "01 00 * * *",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "DELETE FROM ipsec_log WHERE ts_local < datetime('now','localtime','-7 days');",
+        "x": 740,
+        "y": 2060,
+        "wires": [
+            [
+                "f53d71d1c74036aa"
+            ]
+        ]
+    },
+    {
+        "id": "2388109e9cc6ee5b",
+        "type": "function",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Alert",
+        "func": "/***** Alert v2 — 3 outputs *****\nOutput 1: One-shot ALERT (edge UP→DOWN) — dùng để gửi mail/notify\nOutput 2: Pass-through khi hệ thống OK (UP)\nOutput 3: Trigger cho Exec (sudo ipsec reload) — level-trigger khi đang DOWN, không phụ thuộc latch\n*********************************/\n\nconst SEND_RECOVERY        = false;\nconst RELOAD_CMD           = \"sudo ipsec reload\";\nconst RELOAD_THROTTLE_MIN  = 0; // 0 = bắn mỗi lần còn DOWN; >0 = giới hạn theo phút\n\nfunction toNum(v) {\n  const n = Number(v);\n  return Number.isFinite(n) ? n : NaN;\n}\n\n// Dò số theo nhiều đường dẫn có thể gặp trong payload\nfunction pickNumWithPath(root, keys) {\n  for (const k of keys) {\n    try {\n      let cur = root;\n      if (k === \"\") continue;\n      const parts = k.replace(/\\[(\\d+)\\]/g, '.$1').split('.').filter(Boolean);\n      for (const p of parts) cur = cur?.[p];\n      const n = toNum(cur);\n      if (!Number.isNaN(n)) return { value: n, path: k };\n    } catch { /* ignore */ }\n  }\n  return { value: NaN, path: \"\" };\n}\n\n// Dò text theo nhiều đường dẫn\nfunction pickTextWithPath(root, keys) {\n  for (const k of keys) {\n    try {\n      let cur = root;\n      if (k === \"\") continue;\n      const parts = k.replace(/\\[(\\d+)\\]/g, '.$1').split('.').filter(Boolean);\n      for (const p of parts) cur = cur?.[p];\n      if (cur !== undefined && cur !== null && String(cur).trim() !== \"\") {\n        return { value: String(cur), path: k };\n      }\n    } catch { /* ignore */ }\n  }\n  return { value: \"\", path: \"\" };\n}\n\n// Chuẩn hoá input\nlet root = msg;\ntry {\n  if (typeof msg.payload === \"string\") root = { payload: JSON.parse(msg.payload) };\n} catch { /* giữ nguyên */ }\n\n// Các đường dẫn thường gặp\nconst keySets = {\n  sa_up: [\n    \"payload.0.sa_up\",\"payload[0].sa_up\",\"[0].payload.sa_up\",\"[0].sa_up\",\n    \"payload.sa_up\",\"data.sa_up\",\"sa_up\"\n  ],\n  sa_connecting: [\n    \"payload.0.sa_connecting\",\"payload[0].sa_connecting\",\"[0].payload.sa_connecting\",\"[0].sa_connecting\",\n    \"payload.sa_connecting\",\"data.sa_connecting\",\"sa_connecting\"\n  ],\n  ike_sa_id: [\n    \"payload.0.ike_sa_id\",\"payload[0].ike_sa_id\",\"[0].payload.ike_sa_id\",\"[0].ike_sa_id\",\n    \"payload.ike_sa_id\",\"data.ike_sa_id\",\"ike_sa_id\"\n  ],\n  peer: [\n    \"payload.0.peer\",\"payload[0].peer\",\"[0].payload.peer\",\"[0].peer\",\"payload.peer\",\"data.peer\",\"peer\"\n  ],\n  local_id: [\n    \"payload.0.local_id\",\"payload[0].local_id\",\"[0].payload.local_id\",\"[0].local_id\",\"payload.local_id\",\"data.local_id\",\"local_id\"\n  ],\n  remote_id: [\n    \"payload.0.remote_id\",\"payload[0].remote_id\",\"[0].payload.remote_id\",\"[0].remote_id\",\"payload.remote_id\",\"data.remote_id\",\"remote_id\"\n  ]\n};\n\nconst up  = pickNumWithPath(root, keySets.sa_up);\nconst con = pickNumWithPath(root, keySets.sa_connecting);\nconst chi = pickNumWithPath(root, keySets.ike_sa_id);\n\nconst haveAll = [up,con,chi].every(x => Number.isFinite(x.value));\nif (!haveAll) {\n  node.status({ fill: \"yellow\", shape: \"ring\", text: \"Thiếu dữ liệu sa_up/connecting/child\" });\n  return null;\n}\n\nconst statusText = `up=${up.value}(${up.path}) | conn=${con.value}(${con.path}) | child=${chi.value}(${chi.path})`;\n\n// Lấy thêm vài thông tin để ghép nội dung ngắn gọn, tránh [object Object]\nconst peer  = pickTextWithPath(root, keySets.peer).value || \"-\";\nconst lid   = pickTextWithPath(root, keySets.local_id).value || \"-\";\nconst rid   = pickTextWithPath(root, keySets.remote_id).value || \"-\";\n\n// Điều kiện DOWN\nconst cond_sa_down         = (up.value < 1);\nconst cond_connecting_down = (con.value === 1 && up.value === 0);\nconst cond_child_low       = (chi.value < 1);\nconst needAlert            = cond_sa_down || cond_connecting_down || cond_child_low;\n\n// Latch trạng thái\nconst prevState = context.get(\"vpn_state\") || \"INIT\";\nlet latched     = !!context.get(\"vpn_alarm_latched\");\n\n// Chuẩn bị outputs\nlet out1 = null; // one-shot alert (string payload cho node Prepare VPN Error Email)\nlet out2 = null; // OK pass-through\nlet out3 = null; // trigger Exec (level-trigger when DOWN)\n\n// Chống spam reload theo phút cho Output 3\nconst nowMs = Date.now();\nconst lastReloadMs = context.get(\"last_reload_emit_ms\") || 0;\nconst allowReload = RELOAD_THROTTLE_MIN <= 0\n  ? true\n  : (nowMs - lastReloadMs) >= RELOAD_THROTTLE_MIN * 60 * 1000;\n\nif (needAlert) {\n  // Lý do\n  const reasons = [];\n  if (cond_sa_down) reasons.push(\"sa_up < 1\");\n  if (cond_connecting_down) reasons.push(\"sa_up = 0 (trạng thái Established không hoạt động)\");\n  if (cond_child_low) reasons.push(\"ike_sa_id < 1\");\n\n  // Status đỏ\n  node.status({ fill: \"red\", shape: \"dot\", text: `DOWN (A=1) | ${statusText}` });\n\n  // ✅ Output 1: chỉ bắn khi EDGE (UP→DOWN) hoặc INIT→DOWN nếu chưa latched\n  if (prevState !== \"DOWN\" || !latched) {\n    const whenLocal = new Date().toLocaleString('vi-VN');\n    const reasonStr = reasons.length ? reasons.join(\"; \") : \"Không rõ\";\n    const human =\n`Peer: ${peer}\nLocal ID / Remote ID: ${lid} / ${rid}\nTrạng thái: DOWN\nLý do: ${reasonStr}\nChỉ số: up=${up.value}, connecting=${con.value}, ike_sa_id=${chi.value}\nThời điểm: ${whenLocal}`;\n\n    out1 = {\n      topic: \"⚠️ IPsec alert\",\n      // QUAN TRỌNG: payload là STRING để node Prepare VPN Error Email dùng trực tiếp\n      payload: human,\n      // Giữ thêm dữ liệu gốc để debug/đính kèm nếu cần\n      data: { reasons, metrics: { sa_up: up.value, sa_connecting: con.value, ike_sa_id: chi.value }, ts: new Date().toISOString(), raw: root }\n    };\n    latched = true;\n  }\n\n  // Output 3: luôn bắn khi đang DOWN (level-trigger)\n  if (allowReload) {\n    out3 = {\n      topic: \"IPsec reload\",\n      payload: RELOAD_CMD, // Nếu Exec đã có command sẵn thì payload có thể trống\n      reason: \"DOWN\",\n      metrics: { sa_up: up.value, sa_connecting: con.value, ike_sa_id: chi.value },\n      ts: new Date().toISOString()\n    };\n    context.set(\"last_reload_emit_ms\", nowMs);\n  }\n\n  context.set(\"vpn_state\", \"DOWN\");\n  context.set(\"vpn_alarm_latched\", latched);\n  return [out1, null, out3];\n\n} else {\n  // OK\n  node.status({ fill: \"green\", shape: \"ring\", text: `UP (A=0) | ${statusText}` });\n\n  // Output 1: tuỳ chọn gửi “đã khôi phục”\n  if (prevState === \"DOWN\") {\n    context.set(\"vpn_alarm_latched\", false);\n    if (SEND_RECOVERY) {\n      const whenLocal = new Date().toLocaleString('vi-VN');\n      const human =\n`Peer: ${peer}\nLocal ID / Remote ID: ${lid} / ${rid}\nTrạng thái: ĐÃ KHÔI PHỤC (UP)\nChỉ số: up=${up.value}, connecting=${con.value}, ike_sa_id=${chi.value}\nThời điểm: ${whenLocal}`;\n\n      out1 = {\n        topic: \"✅ IPsec đã khôi phục\",\n        payload: human, // để node Prepare dùng chung\n        data: { metrics: { sa_up: up.value, sa_connecting: con.value, ike_sa_id: chi.value }, ts: new Date().toISOString(), raw: root }\n      };\n    }\n  }\n\n  // Output 2: pass-through khi OK\n  out2 = { topic: \"IPsec OK\", payload: root };\n\n  context.set(\"vpn_state\", \"UP\");\n  return [out1, out2, null];\n}\n",
+        "outputs": 3,
+        "timeout": 0,
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 710,
+        "y": 2200,
+        "wires": [
+            [],
+            [],
+            [
+                "51be415f690b0e5a"
+            ]
+        ]
+    },
+    {
+        "id": "f508233c5361c036",
+        "type": "sqlite",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "mydb": "27a071c15915ef14",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "Read ipsec.db",
+        "x": 520,
+        "y": 2320,
+        "wires": [
+            [
+                "808e41d852a507bc"
+            ]
+        ]
+    },
+    {
+        "id": "49307f1f5dfd4b82",
+        "type": "sqlite",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "mydb": "27a071c15915ef14",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "Read ipsec.db",
+        "x": 520,
+        "y": 2360,
+        "wires": [
+            [
+                "fb37da38083d2cbf"
+            ]
+        ]
+    },
+    {
+        "id": "808e41d852a507bc",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "debug 3",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 2320,
+        "wires": []
+    },
+    {
+        "id": "fb37da38083d2cbf",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "debug 5",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 2360,
+        "wires": []
+    },
+    {
+        "id": "51be415f690b0e5a",
+        "type": "exec",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "command": "sudo ipsec reload",
+        "addpay": "",
+        "append": "",
+        "useSpawn": "false",
+        "timer": "10",
+        "winHide": false,
+        "oldrc": false,
+        "name": "",
+        "x": 1025,
+        "y": 2200,
+        "wires": [
+            [],
+            [],
+            []
+        ],
+        "icon": "node-red/join.svg",
+        "l": false
+    },
+    {
+        "id": "7e1df5a8c48c51a9",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "debug 8",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1180,
+        "y": 2120,
+        "wires": []
+    },
+    {
+        "id": "d9bac8298acd029a",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "SELECT sql FROM sqlite_master WHERE type='table' AND name='ipsec_log';",
+        "x": 130,
+        "y": 2420,
+        "wires": [
+            [
+                "5c92d6279e2b1234"
+            ]
+        ]
+    },
+    {
+        "id": "5c92d6279e2b1234",
+        "type": "sqlite",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "mydb": "27a071c15915ef14",
+        "sqlquery": "msg.topic",
+        "sql": "",
+        "name": "Read ipsec.db",
+        "x": 520,
+        "y": 2420,
+        "wires": [
+            [
+                "258d4ea203ee2b3f"
+            ]
+        ]
+    },
+    {
+        "id": "258d4ea203ee2b3f",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "debug 13",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 700,
+        "y": 2420,
+        "wires": []
+    },
+    {
+        "id": "8b89563503872b09",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Create Index",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "CREATE INDEX IF NOT EXISTS idx_ipsec_ts_local ON ipsec_log(ts_local);",
+        "x": 710,
+        "y": 1980,
+        "wires": [
+            [
+                "f53d71d1c74036aa"
+            ]
+        ]
+    },
+    {
+        "id": "141c34fac0113d0b",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Check index",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "SELECT name, sql FROM sqlite_master WHERE type='index' AND tbl_name='ipsec_log';",
+        "x": 150,
+        "y": 2480,
+        "wires": [
+            [
+                "5c92d6279e2b1234"
+            ]
+        ]
+    },
+    {
+        "id": "763ca39814949142",
+        "type": "inject",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "Check index will be deleted",
+        "props": [
+            {
+                "p": "topic",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "SELECT COUNT(*) AS will_delete FROM ipsec_log WHERE date(ts_local) < date('now','localtime','-7 days');",
+        "x": 190,
+        "y": 2520,
+        "wires": [
+            [
+                "5c92d6279e2b1234"
+            ]
+        ]
+    },
+    {
+        "id": "0030978895b252c7",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "g": "fda60e9ab5acc073",
+        "name": "debug 10",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 740,
+        "y": 2160,
+        "wires": []
+    },
+    {
+        "id": "644c632e1c53401f",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 11",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 710,
+        "y": 1440,
+        "wires": []
+    },
+    {
+        "id": "58a74f033099356e",
+        "type": "debug",
+        "z": "ddb875b696c74e74",
+        "name": "debug 12",
+        "active": false,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "false",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 630,
+        "y": 640,
+        "wires": []
+    }
+]

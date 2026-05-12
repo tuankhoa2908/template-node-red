@@ -1,0 +1,257 @@
+[
+    {
+        "id": "tp01a0b0c0d0e000",
+        "type": "tab",
+        "label": "telemetry-publish",
+        "disabled": false,
+        "info": "Telemetry Publish Flow (FR1)\n\nPublishes normalized sensor telemetry from local Mosquitto to ThingsBoard cloud via MQTT TLS.\n\nInput topic: nexus/+/+/telemetry (local Mosquitto)\nOutput topic: v1/devices/me/telemetry (ThingsBoard cloud MQTT TLS)\nOutput format: {\"ts\": <epoch_ms>, \"values\": {\"key\": value}}\n\nConnection: MQTT TLS 1.2+ on port 8883 with access token authentication.\nAuthentication: ThingsBoard Access Token as MQTT username.",
+        "env": []
+    },
+    {
+        "id": "tp01a0b0c0d0e001",
+        "type": "comment",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Flow: telemetry-publish (FR1, NFR2)",
+        "info": "Telemetry Publish Flow\n\nPurpose: Forward normalized sensor telemetry from local Mosquitto to ThingsBoard cloud via MQTT TLS.\n\nInput:\n- Local MQTT: nexus/+/+/telemetry (normalized by protocol-normalization flow)\n\nOutput:\n- ThingsBoard MQTT TLS: v1/devices/me/telemetry\n- ThingsBoard attributes: v1/devices/me/attributes (connection status)\n\nConnection:\n- Host: ${TB_CLOUD_HOST}\n- Port: ${TB_CLOUD_MQTT_PORT} (default 8883)\n- Auth: Access Token as MQTT username\n- TLS: One-way TLS 1.2+ (server cert verification)\n- Client ID: nexus-gw-${ZONE_ID}\n- QoS: 1 (at-least-once delivery)\n- LWT: {\"cloud_connected\": false} on v1/devices/me/attributes\n\nError handling: catch node logs all errors in format:\n[telemetry-publish] {error_type}: {message}",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "tp01a0b0c0d0e0t1",
+        "type": "tls-config",
+        "name": "ThingsBoard TLS",
+        "cert": "",
+        "key": "",
+        "ca": "",
+        "certname": "",
+        "keyname": "",
+        "caname": "",
+        "servername": "${TB_CLOUD_HOST}",
+        "verifyservercert": true,
+        "alpnprotocol": ""
+    },
+    {
+        "id": "tp01a0b0c0d0e0tb",
+        "type": "mqtt-broker",
+        "name": "ThingsBoard Cloud",
+        "broker": "${TB_CLOUD_HOST}",
+        "port": "${TB_CLOUD_MQTT_PORT}",
+        "clientid": "nexus-gw-${ZONE_ID}",
+        "autoConnect": true,
+        "usetls": false,
+        "tls": "",
+        "_comment_tls": "Set usetls:true and tls:tp01a0b0c0d0e0t1 for production TLS",
+        "protocolVersion": "4",
+        "keepalive": "60",
+        "cleansession": true,
+        "autoUnsubscribe": true,
+        "birthTopic": "v1/devices/me/attributes",
+        "birthQos": "1",
+        "birthRetain": "false",
+        "birthPayload": "{\"cloud_connected\":true}",
+        "birthMsg": {},
+        "closeTopic": "v1/devices/me/attributes",
+        "closeQos": "1",
+        "closeRetain": "false",
+        "closePayload": "{\"cloud_connected\":false}",
+        "closeMsg": {},
+        "willTopic": "v1/devices/me/attributes",
+        "willQos": "1",
+        "willRetain": "false",
+        "willPayload": "{\"cloud_connected\":false}",
+        "willMsg": {},
+        "userProps": "",
+        "sessionExpiry": "",
+        "credentials": {
+            "user": "${TB_ACCESS_TOKEN}",
+            "password": ""
+        }
+    },
+    {
+        "id": "tp01a0b0c0d0e010",
+        "type": "mqtt in",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Local Normalized Telemetry",
+        "topic": "nexus/+/+/telemetry",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "tp01a0b0c0d0e011"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e011",
+        "type": "function",
+        "z": "tp01a0b0c0d0e000",
+        "name": "validate-payload",
+        "func": "// Validate incoming payload is ThingsBoard-compatible flat JSON\n// Expected format: {\"ts\": <epoch_ms>, \"values\": {\"key\": value}}\n\nconst payload = msg.payload;\n\nif (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {\n    node.error('[telemetry-publish] InvalidPayload: expected object, got ' + typeof payload, msg);\n    return null;\n}\n\n// Validate 'ts' field\nif (typeof payload.ts !== 'number' || !isFinite(payload.ts) || payload.ts <= 0) {\n    node.error('[telemetry-publish] InvalidTimestamp: ts must be a positive number (epoch_ms), got ' + payload.ts, msg);\n    return null;\n}\n\n// Validate 'values' field\nif (typeof payload.values !== 'object' || payload.values === null || Array.isArray(payload.values)) {\n    node.error('[telemetry-publish] InvalidValues: values must be a flat object', msg);\n    return null;\n}\n\nif (Object.keys(payload.values).length === 0) {\n    node.error('[telemetry-publish] EmptyValues: values object has no keys', msg);\n    return null;\n}\n\n// Validate no nested objects in values (ThingsBoard requires flat)\nfor (const [key, val] of Object.entries(payload.values)) {\n    if (typeof val === 'object' && val !== null) {\n        node.error('[telemetry-publish] NestedValue: key \"' + key + '\" contains nested object — ThingsBoard requires flat values', msg);\n        return null;\n    }\n}\n\n// Payload is valid — set topic for ThingsBoard and forward\n// MQTT-out node handles JSON serialization automatically\nmsg.topic = 'v1/devices/me/telemetry';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 410,
+        "y": 160,
+        "wires": [
+            [
+                "tp01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e012",
+        "type": "mqtt out",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Publish to ThingsBoard",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "tp01a0b0c0d0e0tb",
+        "x": 650,
+        "y": 160,
+        "wires": []
+    },
+    {
+        "id": "tp01a0b0c0d0e020",
+        "type": "status",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Monitor Cloud Connection",
+        "scope": [
+            "tp01a0b0c0d0e012"
+        ],
+        "x": 180,
+        "y": 300,
+        "wires": [
+            [
+                "tp01a0b0c0d0e021"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e021",
+        "type": "function",
+        "z": "tp01a0b0c0d0e000",
+        "name": "connection-status-handler",
+        "func": "// Monitor MQTT-out node connection status changes\n// Publish connection state to local Mosquitto for gateway-health flow (Story 1.6)\n\nconst status = msg.status;\nif (!status || !status.text) {\n    return null;\n}\n\nconst text = status.text.toLowerCase();\nlet connected = null;\n\nif (text.includes('connected') && !text.includes('disconnect')) {\n    connected = true;\n} else if (text.includes('disconnect') || text.includes('error') || text.includes('close')) {\n    connected = false;\n}\n\nif (connected === null) {\n    return null;\n}\n\n// Publish to local Mosquitto for gateway-health flow consumption\nmsg.payload = JSON.stringify({\n    cloud_connected: connected,\n    ts: Date.now()\n});\nmsg.topic = 'nexus/internal/cloud-connection-status';\n\nif (connected) {\n    node.status({ fill: 'green', shape: 'dot', text: 'cloud connected' });\n} else {\n    node.status({ fill: 'red', shape: 'ring', text: 'cloud disconnected' });\n    node.warn('[telemetry-publish] CloudDisconnected: ThingsBoard MQTT connection lost');\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 430,
+        "y": 300,
+        "wires": [
+            [
+                "tp01a0b0c0d0e022"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e022",
+        "type": "mqtt out",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Publish Connection Status",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 690,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "tp01a0b0c0d0e040",
+        "type": "catch",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Catch Telemetry Publish Errors",
+        "scope": [
+            "tp01a0b0c0d0e000"
+        ],
+        "uncaught": false,
+        "x": 170,
+        "y": 440,
+        "wires": [
+            [
+                "tp01a0b0c0d0e041"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e041",
+        "type": "function",
+        "z": "tp01a0b0c0d0e000",
+        "name": "error-log",
+        "func": "// Format error message for logging\nconst errorSource = msg.error ? msg.error.source : {};\nconst errorMsg = msg.error ? msg.error.message : 'Unknown error';\nconst nodeName = errorSource.name || errorSource.id || 'unknown';\n\nnode.warn('[telemetry-publish] ' + nodeName + ': ' + errorMsg);\n\n// Prepare error status for gateway health (consumed by gateway-health flow in Story 1.6)\nmsg.payload = JSON.stringify({\n    ts: Date.now(),\n    values: {\n        tp_error_count: 1,\n        tp_last_error: errorMsg.substring(0, 200)\n    }\n});\nmsg.topic = 'nexus/internal/telemetry-publish-errors';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 440,
+        "wires": [
+            [
+                "tp01a0b0c0d0e043",
+                "tp01a0b0c0d0e042"
+            ]
+        ]
+    },
+    {
+        "id": "tp01a0b0c0d0e043",
+        "type": "mqtt out",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Publish Errors",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 590,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "tp01a0b0c0d0e042",
+        "type": "debug",
+        "z": "tp01a0b0c0d0e000",
+        "name": "Error Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "error.message",
+        "statusType": "msg",
+        "x": 590,
+        "y": 400,
+        "wires": []
+    }
+]

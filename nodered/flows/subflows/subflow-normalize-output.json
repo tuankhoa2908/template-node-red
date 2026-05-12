@@ -1,0 +1,59 @@
+[
+    {
+        "id": "sf01a0b0c0d0e0f0",
+        "type": "subflow",
+        "name": "normalize-output",
+        "info": "Normalizes telemetry key-value pairs into ThingsBoard native flat JSON format.\n\nInput:\n- msg.payload: object with telemetry key-value pairs\n- msg.timestamp: (optional) epoch_ms timestamp\n- msg.output_topic: (optional) target MQTT topic\n\nOutput:\n- msg.payload: {\"ts\": <epoch_ms>, \"values\": {key: val, ...}}\n- msg.topic: set to msg.output_topic if provided",
+        "category": "template-node-red-pi",
+        "in": [
+            {
+                "x": 50,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf01a0b0c0d0e0f1"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 500,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf01a0b0c0d0e0f1",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {
+            "module": "template-node-red-pi",
+            "version": "1.0.0",
+            "author": "template-node-red-pi",
+            "desc": "ThingsBoard telemetry format normalizer"
+        },
+        "color": "#87A980",
+        "icon": "font-awesome/fa-exchange"
+    },
+    {
+        "id": "sf01a0b0c0d0e0f1",
+        "type": "function",
+        "z": "sf01a0b0c0d0e0f0",
+        "name": "normalize-to-thingsboard",
+        "func": "// Normalize telemetry output to ThingsBoard flat JSON format\n// Input: msg.payload = {key1: val1, key2: val2, ...}\n// Input: msg.timestamp (optional, epoch_ms)\n// Output: msg.payload = {\"ts\": <epoch_ms>, \"values\": {key1: val1, ...}}\n\nconst values = {};\nconst raw = msg.payload;\n\nif (typeof raw !== 'object' || raw === null || Array.isArray(raw)) {\n    node.error('[protocol-normalization] InvalidPayload: expected object, got ' + typeof raw, msg);\n    return null;\n}\n\nfor (const [key, val] of Object.entries(raw)) {\n    // Validate key format: snake_case (at least one underscore)\n    if (!/^[a-z][a-z0-9]*(_[a-z0-9]+)+$/.test(key)) {\n        node.warn('[protocol-normalization] InvalidKey: \"' + key + '\" does not match snake_case_unit pattern, skipping');\n        continue;\n    }\n\n    // Coerce string numbers to float\n    if (typeof val === 'string') {\n        const num = parseFloat(val);\n        if (!isNaN(num)) {\n            values[key] = num;\n        } else {\n            values[key] = val;\n        }\n    } else if (typeof val === 'number' && isFinite(val)) {\n        values[key] = val;\n    } else if (typeof val === 'boolean') {\n        values[key] = val;\n    } else {\n        node.warn('[protocol-normalization] InvalidValue: key \"' + key + '\" has unsupported type, skipping');\n        continue;\n    }\n}\n\nif (Object.keys(values).length === 0) {\n    node.error('[protocol-normalization] EmptyPayload: no valid telemetry keys after normalization', msg);\n    return null;\n}\n\nconst ts = msg.timestamp || Date.now();\n\nmsg.payload = {\n    ts: ts,\n    values: values\n};\n\n// Set output topic if provided\nif (msg.output_topic) {\n    msg.topic = msg.output_topic;\n}\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 280,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    }
+]

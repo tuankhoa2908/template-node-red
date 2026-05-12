@@ -1,0 +1,200 @@
+[
+    {
+        "id": "demo_tab_iec104",
+        "type": "tab",
+        "label": "IEC104 Demo Test",
+        "disabled": false,
+        "info": "Demo flow to test iec104-server-core subflow.\n\nHow to test:\n1. Deploy this flow\n2. The subflow will auto-start the mock IEC104 server\n3. Watch debug sidebar for:\n   - 'connected' event on startup\n   - Simulated commands every 5 seconds (if IEC104_SIM_INTERVAL=5)\n4. Click 'Inject Test Command' to simulate sending a command to the server"
+    },
+    {
+        "id": "demo_iec104_instance",
+        "type": "subflow:sf03iec104servercore",
+        "z": "demo_tab_iec104",
+        "name": "IEC104 Server (Demo)",
+        "env": [
+            {
+                "name": "SERVER_COMMAND",
+                "type": "str",
+                "value": "/usr/local/bin/json-iec104-server"
+            },
+            {
+                "name": "IOA_MAP_JSON",
+                "type": "json",
+                "value": "{\"1\":{\"key\":\"p_Out\",\"type\":\"M_ME_NC_1\",\"unit\":\"kw\"},\"2\":{\"key\":\"p_Inv_Out\",\"type\":\"M_ME_NC_1\",\"unit\":\"kw\"},\"3\":{\"key\":\"a_Inv_D1\",\"type\":\"M_ME_NC_1\",\"unit\":\"kwh\"},\"5\":{\"key\":\"Ua\",\"type\":\"M_ME_NC_1\",\"unit\":\"v\"},\"6\":{\"key\":\"Ub\",\"type\":\"M_ME_NC_1\",\"unit\":\"v\"},\"7\":{\"key\":\"Uc\",\"type\":\"M_ME_NC_1\",\"unit\":\"v\"},\"8\":{\"key\":\"Ia\",\"type\":\"M_ME_NC_1\",\"unit\":\"a\"},\"9\":{\"key\":\"Ib\",\"type\":\"M_ME_NC_1\",\"unit\":\"a\"},\"10\":{\"key\":\"Ic\",\"type\":\"M_ME_NC_1\",\"unit\":\"a\"},\"11\":{\"key\":\"frequency\",\"type\":\"M_ME_NC_1\",\"unit\":\"hz\"},\"80\":{\"key\":\"p_Set_kW\",\"type\":\"M_ME_NC_1\",\"unit\":\"kw\"},\"81\":{\"key\":\"p_Set_Per\",\"type\":\"M_ME_NC_1\",\"unit\":\"percent\"},\"82\":{\"key\":\"p_Set_Exp_Enable\",\"type\":\"M_SP_TB_1\",\"unit\":\"bool\"},\"12\":{\"key\":\"export_limit_percent\",\"type\":\"C_SE_NC_1\",\"unit\":\"percent\",\"action\":\"set_export_limit_percent\"},\"13\":{\"key\":\"export_limit_kw\",\"type\":\"C_SE_NC_1\",\"unit\":\"kw\",\"action\":\"set_export_limit_kw\"}}"
+            },
+            {
+                "name": "DEFAULT_DEVICE_ID",
+                "type": "str",
+                "value": "NM2-INV01"
+            },
+            {
+                "name": "DEFAULT_ZONE_ID",
+                "type": "str",
+                "value": "det-chungtien"
+            }
+        ],
+        "x": 380,
+        "y": 200,
+        "wires": [
+            ["demo_dbg_raw"],
+            ["demo_dbg_status"],
+            ["demo_dbg_command"],
+            ["demo_dbg_audit"],
+            ["demo_dbg_error"]
+        ]
+    },
+    {
+        "id": "demo_dbg_raw",
+        "type": "debug",
+        "z": "demo_tab_iec104",
+        "name": "① Raw IEC104 Data",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.type",
+        "statusType": "auto",
+        "x": 670,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "demo_dbg_status",
+        "type": "debug",
+        "z": "demo_tab_iec104",
+        "name": "② Connection Status",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.iec104_connected",
+        "statusType": "auto",
+        "x": 670,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "demo_dbg_command",
+        "type": "debug",
+        "z": "demo_tab_iec104",
+        "name": "③ Command (→ Modbus)",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.action",
+        "statusType": "auto",
+        "x": 680,
+        "y": 240,
+        "wires": []
+    },
+    {
+        "id": "demo_dbg_audit",
+        "type": "debug",
+        "z": "demo_tab_iec104",
+        "name": "④ Audit Trail",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.lifecycle_stage",
+        "statusType": "auto",
+        "x": 650,
+        "y": 300,
+        "wires": []
+    },
+    {
+        "id": "demo_dbg_error",
+        "type": "debug",
+        "z": "demo_tab_iec104",
+        "name": "⑤ Errors / Stderr",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "payload.error_type",
+        "statusType": "auto",
+        "x": 660,
+        "y": 360,
+        "wires": []
+    },
+    {
+        "id": "demo_inject_ack",
+        "type": "inject",
+        "z": "demo_tab_iec104",
+        "name": "Send ACK (IOA 13, COT 7)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"50\",\"value\":80.5,\"address\":13,\"qualifier\":\"0\",\"cot\":\"7\"}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 140,
+        "wires": [
+            ["demo_iec104_instance"]
+        ]
+    },
+    {
+        "id": "demo_inject_nack",
+        "type": "inject",
+        "z": "demo_tab_iec104",
+        "name": "Send NACK (IOA 13, COT 47)",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"50\",\"value\":0,\"address\":13,\"qualifier\":\"0\",\"cot\":\"47\"}",
+        "payloadType": "json",
+        "x": 170,
+        "y": 200,
+        "wires": [
+            ["demo_iec104_instance"]
+        ]
+    },
+    {
+        "id": "demo_inject_stop",
+        "type": "inject",
+        "z": "demo_tab_iec104",
+        "name": "Stop Server",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": 0.1,
+        "topic": "",
+        "payload": "{\"type\":\"0\",\"value\":0,\"address\":0,\"qualifier\":\"0\"}",
+        "payloadType": "json",
+        "x": 130,
+        "y": 260,
+        "wires": [
+            ["demo_iec104_instance"]
+        ]
+    }
+]

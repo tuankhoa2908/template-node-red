@@ -1,0 +1,241 @@
+[
+  {
+    "id": "sf03iec104servercore",
+    "type": "subflow",
+    "name": "iec104-server-core",
+    "info": "Reusable IEC104 server core.\n\nPurpose:\n- Run json-iec104-server daemon.\n- Split newline-delimited stdout.\n- Parse IEC104 JSON events.\n- Route connection status, IEC104 commands, audit events, and errors.\n\nInputs:\n- msg.payload: optional JSON string/object sent to daemon stdin.\n\nOutputs:\n1. raw IEC104 parsed data\n2. connection status object\n3. command object for write-back flow\n4. command audit object\n5. error object\n\nProject-specific configuration is provided with subflow env vars:\n- SERVER_COMMAND: path to json-iec104-server binary.\n- IOA_MAP_JSON: JSON object keyed by IOA, e.g. {\"1\":{\"key\":\"power_draw_kw\",\"type\":\"M_ME_NC_1\",\"unit\":\"kw\"}}\n- DEFAULT_DEVICE_ID\n- DEFAULT_ZONE_ID",
+    "category": "template-node-red-pi",
+    "in": [
+      {
+        "x": 60,
+        "y": 120,
+        "wires": [
+          {
+            "id": "sf03iec104daemon"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 900,
+        "y": 80,
+        "wires": [
+          {
+            "id": "sf03iec104process",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 120,
+        "wires": [
+          {
+            "id": "sf03iec104process",
+            "port": 1
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 160,
+        "wires": [
+          {
+            "id": "sf03iec104process",
+            "port": 2
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 200,
+        "wires": [
+          {
+            "id": "sf03iec104process",
+            "port": 3
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 260,
+        "wires": [
+          {
+            "id": "sf03iec104stderr",
+            "port": 0
+          },
+          {
+            "id": "sf03iec104exit",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "SERVER_COMMAND",
+        "type": "str",
+        "value": "/usr/local/bin/json-iec104-server"
+      },
+      {
+        "name": "IOA_MAP_JSON",
+        "type": "json",
+        "value": {
+          "1": {
+            "key": "power_draw_kw",
+            "type": "M_ME_NC_1",
+            "unit": "kw"
+          },
+          "2": {
+            "key": "export_limit_kw",
+            "type": "M_ME_NC_1",
+            "unit": "kw"
+          },
+          "3": {
+            "key": "inverter_status",
+            "type": "M_SP_NA_1",
+            "unit": "bool"
+          }
+        }
+      },
+      {
+        "name": "DEFAULT_DEVICE_ID",
+        "type": "str",
+        "value": "inverter-01"
+      },
+      {
+        "name": "DEFAULT_ZONE_ID",
+        "type": "str",
+        "value": "zone-01"
+      }
+    ],
+    "meta": {
+      "module": "template-node-red-pi",
+      "version": "1.0.0",
+      "author": "template-node-red-pi",
+      "desc": "Reusable IEC104 daemon/parser/command bridge core"
+    },
+    "color": "#D8BFD8",
+    "icon": "font-awesome/fa-server"
+  },
+  {
+    "id": "sf03iec104daemon",
+    "type": "daemon",
+    "z": "sf03iec104servercore",
+    "name": "json-iec104-server",
+    "command": "${SERVER_COMMAND}",
+    "args": "",
+    "autorun": true,
+    "cr": true,
+    "redo": true,
+    "op": "string",
+    "closer": "SIGINT",
+    "x": 250,
+    "y": 120,
+    "wires": [
+      [
+        "sf03iec104split"
+      ],
+      [
+        "sf03iec104stderr"
+      ],
+      [
+        "sf03iec104exit"
+      ]
+    ]
+  },
+  {
+    "id": "sf03iec104split",
+    "type": "function",
+    "z": "sf03iec104servercore",
+    "name": "split-daemon-lines",
+    "func": "var outputMsgs = [];\nvar payload = String(msg.payload || '');\nvar lines = payload.split('\\n');\nfor (var i = 0; i < lines.length; i++) {\n    var line = lines[i].trim();\n    if (line.length > 0) {\n        outputMsgs.push({payload: line});\n    }\n}\nreturn [outputMsgs];",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 80,
+    "wires": [
+      [
+        "sf03iec104json"
+      ]
+    ]
+  },
+  {
+    "id": "sf03iec104json",
+    "type": "json",
+    "z": "sf03iec104servercore",
+    "name": "parse-json",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 650,
+    "y": 80,
+    "wires": [
+      [
+        "sf03iec104process"
+      ]
+    ]
+  },
+  {
+    "id": "sf03iec104process",
+    "type": "function",
+    "z": "sf03iec104servercore",
+    "name": "route-iec104-message",
+    "func": "var data = msg.payload;\nif (!data || typeof data !== 'object') {\n    return null;\n}\n\nvar ioaMap = env.get('IOA_MAP_JSON') || {};\nif (typeof ioaMap === 'string') {\n    try {\n        ioaMap = JSON.parse(ioaMap);\n    } catch (err) {\n        node.error('[iec104-server-core] ConfigError: invalid IOA_MAP_JSON', msg);\n        return null;\n    }\n}\n\nvar rawMsg = {payload: data};\nvar statusMsg = null;\nvar commandMsg = null;\nvar auditMsg = null;\n\nif (data.type === 'connection' || data.event === 'connected' || data.event === 'disconnected') {\n    var connected = data.event === 'connected' || data.connected === true;\n    statusMsg = {\n        payload: {\n            iec104_connected: connected,\n            ts: Date.now()\n        }\n    };\n    node.status({\n        fill: connected ? 'green' : 'red',\n        shape: 'dot',\n        text: connected ? 'connected' : 'disconnected'\n    });\n}\n\nvar typeNum = parseInt(data.type, 10);\nvar isCommand = typeNum === 45 || typeNum === 50 || typeNum === 100 || data.direction === 'command';\nif (isCommand) {\n    var ioa = String(parseInt(data.address, 10));\n    var mapping = ioaMap[ioa];\n\n    if ((typeNum === 45 || typeNum === 50) && mapping) {\n        var eventId = Date.now().toString(36) + Math.random().toString(36).slice(2, 6);\n        var now = Date.now();\n        var action = mapping.action || ('set_' + mapping.key);\n        var value = data.value;\n\n        if (typeNum === 50) {\n            value = parseFloat(value) || 0;\n        }\n\n        commandMsg = {\n            payload: {\n                device_id: data.device_id || env.get('DEFAULT_DEVICE_ID') || 'device-01',\n                zone_id: data.zone_id || env.get('DEFAULT_ZONE_ID') || 'zone-01',\n                action: action,\n                value: value,\n                unit: mapping.unit || '',\n                source: 'iec104',\n                timestamp: now,\n                event_id: eventId,\n                ioa: parseInt(ioa, 10),\n                iec104_type: data.type\n            }\n        };\n\n        auditMsg = {\n            payload: {\n                event_id: eventId,\n                source: 'iec104',\n                device_id: commandMsg.payload.device_id,\n                zone_id: commandMsg.payload.zone_id,\n                action: action,\n                value: value,\n                lifecycle_stage: 'command_received',\n                result: {status: 'forwarded_to_writeback'},\n                timestamp: now\n            }\n        };\n    }\n}\n\nreturn [rawMsg, statusMsg, commandMsg, auditMsg];",
+    "outputs": 4,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "node.status({fill: 'grey', shape: 'ring', text: 'initializing'});",
+    "finalize": "",
+    "libs": [],
+    "x": 650,
+    "y": 140,
+    "wires": [
+      [],
+      [],
+      [],
+      []
+    ]
+  },
+  {
+    "id": "sf03iec104stderr",
+    "type": "function",
+    "z": "sf03iec104servercore",
+    "name": "format-stderr",
+    "func": "msg.payload = {\n    error_type: 'Iec104ServerStderr',\n    source: 'json-iec104-server',\n    message: String(msg.payload || '').substring(0, 500),\n    ts: Date.now()\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 470,
+    "y": 240,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf03iec104exit",
+    "type": "function",
+    "z": "sf03iec104servercore",
+    "name": "format-exit",
+    "func": "msg.payload = {\n    error_type: 'Iec104ServerExit',\n    source: 'json-iec104-server',\n    message: String(msg.payload || '').substring(0, 500),\n    ts: Date.now()\n};\nreturn msg;",
+    "outputs": 1,
+    "timeout": "",
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 460,
+    "y": 300,
+    "wires": [
+      []
+    ]
+  }
+]

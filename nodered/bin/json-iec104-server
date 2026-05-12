@@ -1,0 +1,134 @@
+#!/usr/bin/env node
+/**
+ * Mock json-iec104-server — development substitute for the production IEC104 binary.
+ *
+ * Emulates the real binary's stdin/stdout JSON protocol:
+ * - Emits a 'connected' event on startup
+ * - Listens on IEC104_PORT (default 2404) for TCP connections (accepts and holds)
+ * - Reads newline-delimited JSON from stdin (ack/nack from Node-RED)
+ * - Optionally emits simulated set-point commands (IEC104_SIM_INTERVAL > 0)
+ * - Handles SIGINT for clean shutdown
+ *
+ * stdout JSON formats (to Node-RED):
+ *   Connection:  {"event":"connected","type":"connection"}
+ *   Command:     {"type":"50","value":50.0,"address":2,"qualifier":"0","direction":"command"}
+ *   Disconnect:  {"event":"disconnected","type":"connection"}
+ *
+ * stdin JSON formats (from Node-RED):
+ *   Ack:   {"type":"50","value":50.0,"address":2,"qualifier":"0","cot":"7"}
+ *   Nack:  {"type":"50","value":0,"address":2,"qualifier":"0","cot":"47"}
+ *   Stop:  {"type":"0","value":0,"address":0,"qualifier":"0"}
+ *
+ * Environment variables:
+ *   IEC104_PORT         — TCP listen port (default: 2404)
+ *   IEC104_SIM_INTERVAL — Seconds between simulated commands, 0=disabled (default: 0)
+ */
+
+'use strict';
+
+const net = require('net');
+const readline = require('readline');
+
+const LISTEN_PORT = parseInt(process.env.IEC104_PORT || '2404', 10);
+const SIM_INTERVAL = parseInt(process.env.IEC104_SIM_INTERVAL || '0', 10);
+
+let clientConnected = false;
+let simTimer = null;
+
+function emit(obj) {
+  try {
+    process.stdout.write(JSON.stringify(obj) + '\n');
+  } catch (e) {
+    // broken pipe — ignore
+  }
+}
+
+function log(msg) {
+  process.stderr.write('[mock-iec104] ' + msg + '\n');
+}
+
+// --- TCP listener: simulate IEC104 port for grid operator connections ---
+const server = net.createServer((conn) => {
+  const addr = conn.remoteAddress + ':' + conn.remotePort;
+  clientConnected = true;
+  log('Client connected: ' + addr);
+  emit({ event: 'connected', type: 'connection' });
+
+  conn.on('error', () => {});
+  conn.on('close', () => {
+    clientConnected = false;
+    log('Client disconnected: ' + addr);
+    emit({ event: 'disconnected', type: 'connection' });
+  });
+});
+
+server.on('error', (err) => {
+  log('Cannot bind port ' + LISTEN_PORT + ': ' + err.message);
+});
+
+server.listen(LISTEN_PORT, '0.0.0.0', () => {
+  log('Listening on port ' + LISTEN_PORT);
+});
+
+// --- stdin reader: receive ack/nack/stop from Node-RED daemon node ---
+const rl = readline.createInterface({ input: process.stdin, terminal: false });
+
+rl.on('line', (line) => {
+  line = line.trim();
+  if (!line) return;
+  try {
+    const msg = JSON.parse(line);
+    const cot = msg.cot || '';
+    const ioa = msg.address || 0;
+    const val = msg.value || 0;
+
+    if (msg.type === '0') {
+      log('Stop command received');
+    } else if (cot === '7') {
+      log('ACK sent to grid operator: IOA=' + ioa + ' value=' + val);
+    } else if (cot === '47') {
+      log('NACK sent to grid operator: IOA=' + ioa + ' value=' + val);
+    } else {
+      log('stdin: ' + JSON.stringify(msg));
+    }
+  } catch (e) {
+    log('Invalid JSON on stdin: ' + line);
+  }
+});
+
+rl.on('close', () => {
+  shutdown();
+});
+
+// --- Optional command simulator ---
+if (SIM_INTERVAL > 0) {
+  simTimer = setInterval(() => {
+    if (clientConnected) {
+      const cmd = {
+        type: '50',
+        value: 50.0,
+        address: 2,
+        qualifier: '0',
+        direction: 'command'
+      };
+      emit(cmd);
+      log('Simulated command: set_export_limit_kw=50.0');
+    }
+  }, SIM_INTERVAL * 1000);
+}
+
+// --- Startup ---
+log('Starting mock IEC104 server');
+emit({ event: 'connected', type: 'connection' });
+
+// --- Shutdown ---
+function shutdown() {
+  emit({ event: 'disconnected', type: 'connection' });
+  log('Shutting down');
+  if (simTimer) clearInterval(simTimer);
+  server.close();
+  process.exit(0);
+}
+
+process.on('SIGINT', shutdown);
+process.on('SIGTERM', shutdown);

@@ -1,0 +1,544 @@
+[
+    {
+        "id": "ie01a0b0c0d0e000",
+        "type": "tab",
+        "label": "iec104-server",
+        "disabled": false,
+        "info": "IEC 60870-5-104 SCADA Server Flow (FR48) + Command Bridge (Story 2.4)\n\nRuns an external json-iec104-server binary via daemon node to provide IEC104 server functionality for grid operator (EVN) connections.\n\nInputs:\n- IEC-Server-In (link in) — control commands from other flows\n- nexus/+/+/telemetry — latest inverter telemetry for IEC104 responses\n- nexus/internal/writeback-status — Modbus write confirmation (Story 2.4)\n- nexus/internal/writeback-errors — Modbus write failure (Story 2.4)\n\nOutputs:\n- IEC-Server-Out (link out) — parsed IEC104 data to other flows\n- nexus/internal/iec104-status — connection status (retained)\n- nexus/internal/iec104-command — control commands from grid operator (includes event_id for audit)\n- nexus/internal/iec104-errors — error reporting\n- nexus/internal/command-audit — command lifecycle audit trail (Story 2.4)\n\nProtocol: IEC 60870-5-104 (TCP port 2404)\nRole: Controlled station (server) — EVN connects as controlling station (client)\n\nCommand Bridge (Story 2.4):\n- Subscribes to writeback-status/errors from Modbus write-back flow\n- Converts write confirmations into IEC104 ack (C_SE_NC_1, COT=7) sent back to grid operator\n- Converts write failures into IEC104 nack (C_SE_NC_1, COT=47) sent back to grid operator\n- Publishes command lifecycle audit trail to nexus/internal/command-audit",
+        "env": []
+    },
+    {
+        "id": "ie01a0b0c0d0e001",
+        "type": "comment",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Flow: iec104-server (FR48) + Command Bridge (Story 2.4)",
+        "info": "IEC 60870-5-104 SCADA Server Flow\n\nPurpose: Provide IEC104 server for grid operator to monitor and control solar inverters.\n\nArchitecture:\n- External binary (json-iec104-server) managed by daemon node\n- Communication via stdin/stdout with newline-delimited JSON\n- Connection status published to MQTT for gateway health integration\n- Control commands forwarded to MQTT for Modbus write-back (Story 2.2)\n- Write confirmations/errors flow back from Modbus to IEC104 for grid operator acknowledgment (Story 2.4)\n\nIOA Mapping:\n- IOA 1: power_draw_kw (M_ME_NC_1, float)\n- IOA 2: export_limit_kw (M_ME_NC_1, float)\n- IOA 3: inverter_status (M_SP_NA_1, boolean)\n\nReverse IOA Mapping (action → IOA for ack/nack):\n- set_power_draw_kw → IOA 1\n- set_export_limit_kw → IOA 2\n- set_inverter_status → IOA 3\n\nError handling: catch node logs all errors via nexus/internal/iec104-errors",
+        "x": 310,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e010",
+        "type": "inject",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Start IEC104 Server",
+        "props": [
+            {
+                "p": "start",
+                "v": "",
+                "vt": "str"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": true,
+        "onceDelay": "3",
+        "topic": "",
+        "x": 180,
+        "y": 140,
+        "wires": [
+            [
+                "ie01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e011",
+        "type": "inject",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Stop IEC104 Server",
+        "props": [
+            {
+                "p": "payload"
+            }
+        ],
+        "repeat": "",
+        "crontab": "",
+        "once": false,
+        "onceDelay": "",
+        "topic": "",
+        "payload": "{\"type\":\"0\",\"value\":0,\"address\":0,\"qualifier\":\"0\"}",
+        "payloadType": "json",
+        "x": 180,
+        "y": 200,
+        "wires": [
+            [
+                "ie01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e013",
+        "type": "link in",
+        "z": "ie01a0b0c0d0e000",
+        "name": "IEC-Server-In",
+        "links": [],
+        "x": 155,
+        "y": 260,
+        "wires": [
+            [
+                "ie01a0b0c0d0e012"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e012",
+        "type": "daemon",
+        "z": "ie01a0b0c0d0e000",
+        "name": "json-iec104-server",
+        "command": "/usr/local/bin/json-iec104-server",
+        "args": "",
+        "autorun": true,
+        "cr": true,
+        "redo": true,
+        "op": "string",
+        "closer": "SIGINT",
+        "x": 430,
+        "y": 180,
+        "wires": [
+            [
+                "ie01a0b0c0d0e020"
+            ],
+            [
+                "ie01a0b0c0d0e051"
+            ],
+            [
+                "ie01a0b0c0d0e052"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e020",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "check-and-split-data",
+        "func": "// Split daemon stdout by newlines, filter lines > 10 chars\n// Outputs individual messages for JSON parsing\nvar outputMsgs = [];\nvar objects = msg.payload.split(\"\\n\");\nfor (var o in objects) {\n    if (objects[o].length > 10) {\n        outputMsgs.push({payload: objects[o]});\n    }\n}\nreturn [outputMsgs];",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 660,
+        "y": 140,
+        "wires": [
+            [
+                "ie01a0b0c0d0e021"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e021",
+        "type": "json",
+        "z": "ie01a0b0c0d0e000",
+        "name": "parse-json",
+        "property": "payload",
+        "action": "obj",
+        "pretty": false,
+        "x": 850,
+        "y": 140,
+        "wires": [
+            [
+                "ie01a0b0c0d0e022"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e022",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "process-iec104-message",
+        "func": "// Process parsed IEC104 JSON messages from the server binary\n// Detects connection events, control commands, and data messages\n// Output 1: All parsed data → link out (IEC-Server-Out)\n// Output 2: Connection status → MQTT iec104-status\n// Output 3: Control commands → MQTT iec104-command\n// Output 4: Command audit → MQTT command-audit (Story 2.4)\n\nvar data = msg.payload;\nif (!data || typeof data !== 'object') {\n    return null;\n}\n\n// IOA-to-telemetry-key mapping (Task 2)\nvar ioaMap = {\n    1: {key: 'power_draw_kw', type: 'M_ME_NC_1'},\n    2: {key: 'export_limit_kw', type: 'M_ME_NC_1'},\n    3: {key: 'inverter_status', type: 'M_SP_NA_1'}\n};\n\nvar linkOutMsg = {payload: data};\nvar statusMsg = null;\nvar commandMsg = null;\nvar auditMsg = null;\n\n// Detect connection/disconnection events\nif (data.type === 'connection' || data.event === 'connected' || data.event === 'disconnected') {\n    var connected = (data.event === 'connected' || data.connected === true);\n    flow.set('iec104Connected', connected);\n\n    statusMsg = {\n        payload: JSON.stringify({iec104_connected: connected, ts: Date.now()}),\n        topic: 'nexus/internal/iec104-status'\n    };\n\n    node.status({\n        fill: connected ? 'green' : 'red',\n        shape: 'dot',\n        text: connected ? 'EVN connected' : 'EVN disconnected'\n    });\n}\n\n// Detect control commands from grid operator (C_SE_NC_1 = type 50, C_IC_NA_1 = type 100)\nvar typeNum = parseInt(data.type, 10);\nif (typeNum === 50 || typeNum === 100 || data.direction === 'command') {\n    var ioa = parseInt(data.address, 10);\n    var mapping = ioaMap[ioa];\n\n    // For interrogation commands (type 100), respond with current telemetry\n    if (typeNum === 100) {\n        var latestTelemetry = flow.get('latestTelemetry') || {};\n        // Telemetry response will be handled by feeding values back to daemon stdin\n        // via the link out → other flows → link in path\n    }\n\n    // For set-point commands (type 50), forward to MQTT\n    if (typeNum === 50 && mapping) {\n        // Generate unique event_id for audit correlation (Story 2.4)\n        var eventId = Date.now().toString(36) + Math.random().toString(36).substr(2, 4);\n        var now = Date.now();\n\n        var commandPayload = {\n            device_id: flow.get('latestDeviceId') || 'inverter-01',\n            zone_id: env.get('ZONE_ID') || 'zone-01',\n            action: 'set_' + mapping.key,\n            value: parseFloat(data.value) || 0,\n            unit: 'kw',\n            source: 'iec104',\n            timestamp: now,\n            event_id: eventId\n        };\n\n        commandMsg = {\n            payload: JSON.stringify(commandPayload),\n            topic: 'nexus/internal/iec104-command'\n        };\n\n        // Command receipt audit entry (Story 2.4)\n        auditMsg = {\n            payload: JSON.stringify({\n                event_id: eventId,\n                source: 'iec104',\n                device_id: commandPayload.device_id,\n                zone_id: commandPayload.zone_id,\n                action: commandPayload.action,\n                value: commandPayload.value,\n                lifecycle_stage: 'command_received',\n                result: {status: 'forwarded_to_writeback'},\n                timestamp: now\n            }),\n            topic: 'nexus/internal/command-audit'\n        };\n    }\n}\n\nreturn [linkOutMsg, statusMsg, commandMsg, auditMsg];",
+        "outputs": 4,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "// Initialize IEC104 flow context\nflow.set('iec104Connected', false);\nflow.set('latestTelemetry', {});\nflow.set('latestDeviceId', 'inverter-01');\nnode.status({fill: 'grey', shape: 'ring', text: 'initializing'});",
+        "finalize": "",
+        "libs": [],
+        "x": 1070,
+        "y": 140,
+        "wires": [
+            [
+                "ie01a0b0c0d0e023",
+                "ie01a0b0c0d0e053"
+            ],
+            [
+                "ie01a0b0c0d0e030"
+            ],
+            [
+                "ie01a0b0c0d0e031"
+            ],
+            [
+                "ie01a0b0c0d0e077",
+                "ie01a0b0c0d0e078"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e023",
+        "type": "link out",
+        "z": "ie01a0b0c0d0e000",
+        "name": "IEC-Server-Out",
+        "mode": "link",
+        "links": [],
+        "x": 1295,
+        "y": 100,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e030",
+        "type": "mqtt out",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Publish IEC104 Status",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 1310,
+        "y": 180,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e031",
+        "type": "mqtt out",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Publish IEC104 Command",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 1320,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e040",
+        "type": "mqtt in",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Inverter Telemetry",
+        "topic": "nexus/+/+/telemetry",
+        "qos": "0",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 400,
+        "wires": [
+            [
+                "ie01a0b0c0d0e041"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e041",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "store-latest-telemetry",
+        "func": "// Store latest inverter telemetry values in flow context\n// for IEC104 interrogation responses\n// Input topic: nexus/{zone_id}/{device_id}/telemetry\n\nvar topicParts = msg.topic.split('/');\nif (topicParts.length < 4) {\n    return null;\n}\n\nvar zoneId = topicParts[1];\nvar deviceId = topicParts[2];\nvar data = msg.payload;\n\nif (!data || typeof data !== 'object') {\n    return null;\n}\n\n// Extract values - handle ThingsBoard format {ts, values} or flat format\nvar values = data.values || data;\n\nvar latestTelemetry = flow.get('latestTelemetry') || {};\nlatestTelemetry[deviceId] = {\n    zone_id: zoneId,\n    device_id: deviceId,\n    power_draw_kw: values.power_draw_kw,\n    export_limit_kw: values.export_limit_kw,\n    inverter_status: values.inverter_status,\n    ts: Date.now()\n};\n\nflow.set('latestTelemetry', latestTelemetry);\nflow.set('latestDeviceId', deviceId);\n\nnode.status({fill: 'green', shape: 'dot', text: deviceId + ' updated'});\n\nreturn null;",
+        "outputs": 0,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 420,
+        "y": 400,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e051",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Daemon stderr",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 650,
+        "y": 200,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e052",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Daemon return code",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 670,
+        "y": 260,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e053",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Parsed IEC104 Data",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 1310,
+        "y": 60,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e060",
+        "type": "catch",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Catch IEC104 Errors",
+        "scope": null,
+        "uncaught": false,
+        "x": 160,
+        "y": 520,
+        "wires": [
+            [
+                "ie01a0b0c0d0e061"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e061",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "error-log",
+        "func": "// Format error message for logging and publishing\nvar errorSource = msg.error ? msg.error.source : {};\nvar errorMsg = msg.error ? msg.error.message : 'Unknown error';\nvar nodeName = errorSource.name || errorSource.id || 'unknown';\n\nvar errorType = 'UnknownError';\nvar typeMatch = errorMsg.match(/\\[iec104-server\\]\\s+(\\w+):\\s*(.*)/);\nif (typeMatch) {\n    errorType = typeMatch[1];\n    errorMsg = typeMatch[2];\n} else {\n    errorType = nodeName.replace(/[^a-zA-Z0-9]/g, '_') + '_Error';\n}\n\nnode.warn('[iec104-server] ' + errorType + ': ' + errorMsg);\n\nmsg.payload = JSON.stringify({\n    error_type: errorType,\n    source: nodeName,\n    message: errorMsg.substring(0, 200),\n    ts: Date.now()\n});\nmsg.topic = 'nexus/internal/iec104-errors';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 370,
+        "y": 520,
+        "wires": [
+            [
+                "ie01a0b0c0d0e062",
+                "ie01a0b0c0d0e063"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e062",
+        "type": "mqtt out",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Publish Errors",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 570,
+        "y": 560,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e063",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Error Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "error.message",
+        "statusType": "msg",
+        "x": 570,
+        "y": 480,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e070",
+        "type": "mqtt in",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Writeback Status",
+        "topic": "nexus/internal/writeback-status",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 660,
+        "wires": [
+            [
+                "ie01a0b0c0d0e072"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e071",
+        "type": "mqtt in",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Writeback Errors",
+        "topic": "nexus/internal/writeback-errors",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 160,
+        "y": 740,
+        "wires": [
+            [
+                "ie01a0b0c0d0e073"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e072",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "build-iec104-ack",
+        "func": "// Convert writeback-status confirmation into IEC104 daemon stdin JSON\n// for grid operator acknowledgment (positive confirm)\n// Output 1: IEC104 ack → daemon stdin\n// Output 2: Audit entry → command-audit MQTT\n//\n// Only send ack for IEC104-originated commands (source === 'iec104')\n\nvar status = msg.payload;\nif (!status || typeof status !== 'object') {\n    return null;\n}\n\n// Only acknowledge IEC104-originated commands\nif (status.source !== 'iec104') {\n    return null;\n}\n\n// Reverse IOA mapping: action → IOA address\nvar actionToIoa = {\n    'set_power_draw_kw': 1,\n    'set_export_limit_kw': 2,\n    'set_inverter_status': 3\n};\n\nvar ioa = actionToIoa[status.action];\nif (!ioa) {\n    node.warn('[iec104-server] AckError: no IOA mapping for action ' + status.action);\n    return null;\n}\n\n// Build IEC104 positive acknowledgment for daemon stdin\n// C_SE_NC_1 (type 50) with COT=7 (activation confirm)\nvar ackPayload = JSON.stringify({\n    type: '50',\n    value: status.value,\n    address: ioa,\n    qualifier: '0',\n    cot: '7'\n});\n\nvar ackMsg = {\n    payload: ackPayload\n};\n\n// Build audit entry for write_confirmed lifecycle stage\nvar auditMsg = {\n    payload: JSON.stringify({\n        event_id: status.event_id || '',\n        source: 'iec104',\n        device_id: status.device_id,\n        zone_id: status.zone_id,\n        action: status.action,\n        value: status.value,\n        lifecycle_stage: 'write_confirmed',\n        result: {status: 'confirmed', register_address: status.register_address},\n        timestamp: Date.now()\n    }),\n    topic: 'nexus/internal/command-audit'\n};\n\nnode.log('[iec104-server] AckSent: ' + status.action + '=' + status.value + ' IOA=' + ioa + ' for device ' + status.device_id);\n\nreturn [ackMsg, auditMsg];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 660,
+        "wires": [
+            [
+                "ie01a0b0c0d0e012",
+                "ie01a0b0c0d0e074"
+            ],
+            [
+                "ie01a0b0c0d0e077",
+                "ie01a0b0c0d0e078"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e073",
+        "type": "function",
+        "z": "ie01a0b0c0d0e000",
+        "name": "build-iec104-nack",
+        "func": "// Convert writeback-errors into IEC104 daemon stdin JSON\n// for grid operator error response (negative confirm)\n// Output 1: IEC104 nack → daemon stdin\n// Output 2: Audit entry → command-audit MQTT\n//\n// Only send nack for IEC104-originated commands (source === 'iec104')\n\nvar error = msg.payload;\nif (!error || typeof error !== 'object') {\n    return null;\n}\n\n// Only acknowledge IEC104-originated commands\nif (error.source !== 'iec104') {\n    return null;\n}\n\n// Reverse IOA mapping: action → IOA address\nvar actionToIoa = {\n    'set_power_draw_kw': 1,\n    'set_export_limit_kw': 2,\n    'set_inverter_status': 3\n};\n\nvar ioa = actionToIoa[error.action];\nif (!ioa) {\n    node.warn('[iec104-server] NackError: no IOA mapping for action ' + error.action);\n    // Still publish audit even if we can't send IEC104 nack\n    ioa = 0;\n}\n\n// Build IEC104 negative acknowledgment for daemon stdin\n// C_SE_NC_1 (type 50) with COT=47 (negative activation confirm)\nvar nackMsg = null;\nif (ioa > 0) {\n    nackMsg = {\n        payload: JSON.stringify({\n            type: '50',\n            value: 0,\n            address: ioa,\n            qualifier: '0',\n            cot: '47'\n        })\n    };\n}\n\n// Build audit entry for write_failed lifecycle stage\nvar auditMsg = {\n    payload: JSON.stringify({\n        event_id: error.event_id || '',\n        source: 'iec104',\n        device_id: error.device_id,\n        zone_id: error.zone_id,\n        action: error.action,\n        value: error.value,\n        lifecycle_stage: 'write_failed',\n        result: {status: 'failed', error: error.error, retries_exhausted: error.retries_exhausted},\n        timestamp: Date.now()\n    }),\n    topic: 'nexus/internal/command-audit'\n};\n\nnode.warn('[iec104-server] NackSent: ' + error.action + ' failed for device ' + error.device_id + ' — ' + error.error);\n\nreturn [nackMsg, auditMsg];",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 740,
+        "wires": [
+            [
+                "ie01a0b0c0d0e012",
+                "ie01a0b0c0d0e075"
+            ],
+            [
+                "ie01a0b0c0d0e077",
+                "ie01a0b0c0d0e078"
+            ]
+        ]
+    },
+    {
+        "id": "ie01a0b0c0d0e074",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "IEC104 Ack Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 650,
+        "y": 620,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e075",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "IEC104 Nack Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 650,
+        "y": 780,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e077",
+        "type": "mqtt out",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Publish Command Audit",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 660,
+        "y": 700,
+        "wires": []
+    },
+    {
+        "id": "ie01a0b0c0d0e078",
+        "type": "debug",
+        "z": "ie01a0b0c0d0e000",
+        "name": "Audit Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": false,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "",
+        "statusType": "auto",
+        "x": 630,
+        "y": 740,
+        "wires": []
+    }
+]

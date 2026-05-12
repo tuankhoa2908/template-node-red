@@ -1,0 +1,298 @@
+[
+    {
+        "id": "db01a0b0c0d0e000",
+        "type": "tab",
+        "label": "data-buffering",
+        "disabled": false,
+        "info": "Data Buffering Flow (FR4)\n\nBuffers telemetry locally when cloud connectivity is lost and replays on reconnection.\nEnsures zero data loss during network outages (NFR19).\n\nInput: nexus/internal/cloud-connection-status (connection state from telemetry-publish flow)\nInput: nexus/+/+/telemetry (normalized telemetry to buffer when disconnected)\nOutput: v1/devices/me/telemetry on ThingsBoard cloud (replayed buffered data)\nStatus: nexus/internal/buffer-status (buffer state for gateway-health flow)\nControl: nexus/internal/telemetry-publish-control (pause/resume coordination)\n\nBuffering strategy: Flow context array with Mosquitto QoS 1 delivery guarantees.\nReconnection sequence: detect reconnect → 2s delay → replay buffered → resume live.",
+        "env": []
+    },
+    {
+        "id": "db01a0b0c0d0e001",
+        "type": "comment",
+        "z": "db01a0b0c0d0e000",
+        "name": "Flow: data-buffering (FR4, NFR17, NFR19)",
+        "info": "Data Buffering Flow\n\nPurpose: Buffer telemetry locally during cloud connectivity loss and replay on reconnection with zero data loss.\n\nInputs:\n- nexus/internal/cloud-connection-status — connection state from telemetry-publish flow (Story 1.4)\n- nexus/+/+/telemetry — normalized telemetry (same as telemetry-publish subscribes to)\n\nOutputs:\n- v1/devices/me/telemetry on ThingsBoard cloud — replayed buffered data\n- nexus/internal/buffer-status — buffer state for gateway-health flow (Story 1.6)\n- nexus/internal/telemetry-publish-control — pause/resume coordination\n- nexus/internal/data-buffering-errors — error reporting\n\nReconnection Sequence (from Architecture):\n1. Detect reconnect via cloud-connection-status topic\n2. Debounce 3 seconds to confirm stable connection\n3. Publish pause command\n4. Wait 2 seconds\n5. Replay buffered messages chronologically (FIFO)\n6. Publish resume command\n7. Report buffer_queue_size: 0\n\nError handling: catch node logs all errors in format:\n[data-buffering] {error_type}: {message}",
+        "x": 250,
+        "y": 40,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e010",
+        "type": "mqtt in",
+        "z": "db01a0b0c0d0e000",
+        "name": "Cloud Connection Status",
+        "topic": "nexus/internal/cloud-connection-status",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 160,
+        "wires": [
+            [
+                "db01a0b0c0d0e011"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e011",
+        "type": "function",
+        "z": "db01a0b0c0d0e000",
+        "name": "connection-state-manager",
+        "func": "// Parse cloud connection status, debounce, manage buffering state\n// Input: {cloud_connected: true/false, ts: <epoch_ms>}\n// Output 1: Status/control messages to local Mosquitto\n// Output 2: Replay trigger on confirmed reconnection\n\nvar data;\ntry {\n    data = (typeof msg.payload === 'string') ? JSON.parse(msg.payload) : msg.payload;\n} catch (e) {\n    node.error('[data-buffering] ParseError: invalid cloud-connection-status payload', msg);\n    return null;\n}\n\nvar cloudConnected = data.cloud_connected;\nif (typeof cloudConnected !== 'boolean') {\n    node.warn('[data-buffering] InvalidStatus: cloud_connected is not boolean: ' + typeof cloudConnected);\n    return null;\n}\n\n// Debounce: cancel any pending timer\nvar existingTimer = context.get('debounceTimer');\nif (existingTimer) {\n    clearTimeout(existingTimer);\n}\n\nvar debounceMs = 3000;\nvar timer = setTimeout(function() {\n    context.set('debounceTimer', null);\n    var previousState = flow.get('cloudConnected');\n    flow.set('cloudConnected', cloudConnected);\n    var ts = Date.now();\n\n    if (!cloudConnected && previousState !== false) {\n        // Cloud disconnected — activate buffering\n        flow.set('bufferingActive', true);\n        node.warn('[data-buffering] info: Cloud disconnected \\u2014 buffering mode activated');\n        node.status({fill: 'yellow', shape: 'ring', text: 'buffering active'});\n\n        node.send([{\n            topic: 'nexus/internal/buffer-status',\n            payload: JSON.stringify({\n                buffering_active: true,\n                buffer_queue_size: flow.get('bufferQueueSize') || 0,\n                ts: ts\n            })\n        }, null]);\n\n    } else if (cloudConnected && previousState === false) {\n        // Cloud reconnected — start replay sequence\n        var queueSize = flow.get('bufferQueueSize') || 0;\n        node.warn('[data-buffering] info: Cloud reconnected \\u2014 starting replay (' + queueSize + ' buffered)');\n        node.status({fill: 'blue', shape: 'dot', text: 'replaying ' + queueSize + ' msgs'});\n\n        // Publish pause command\n        node.send([{\n            topic: 'nexus/internal/telemetry-publish-control',\n            payload: JSON.stringify({action: 'pause', reason: 'buffer-replay', ts: ts})\n        }, null]);\n\n        if (queueSize > 0) {\n            // Trigger replay after delay (output 2)\n            node.send([null, {payload: {action: 'replay', queueSize: queueSize}}]);\n        } else {\n            // Nothing to replay — immediately complete\n            flow.set('bufferingActive', false);\n            node.status({fill: 'green', shape: 'dot', text: 'connected, buffer empty'});\n\n            node.send([{\n                topic: 'nexus/internal/telemetry-publish-control',\n                payload: JSON.stringify({action: 'resume', ts: ts})\n            }, null]);\n\n            node.send([{\n                topic: 'nexus/internal/buffer-status',\n                payload: JSON.stringify({buffering_active: false, buffer_queue_size: 0, ts: ts})\n            }, null]);\n        }\n    }\n}, debounceMs);\n\ncontext.set('debounceTimer', timer);\nreturn null;",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "// Initialize buffering state on flow startup\nflow.set('cloudConnected', undefined);\nflow.set('bufferingActive', false);\nif (!flow.get('bufferQueue')) {\n    flow.set('bufferQueue', []);\n}\nflow.set('bufferQueueSize', (flow.get('bufferQueue') || []).length);\nnode.status({fill: 'grey', shape: 'ring', text: 'waiting for status'});",
+        "finalize": "// Clean up debounce timer\nvar timer = context.get('debounceTimer');\nif (timer) {\n    clearTimeout(timer);\n}",
+        "libs": [],
+        "x": 430,
+        "y": 160,
+        "wires": [
+            [
+                "db01a0b0c0d0e012"
+            ],
+            [
+                "db01a0b0c0d0e030"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e012",
+        "type": "mqtt out",
+        "z": "db01a0b0c0d0e000",
+        "name": "Publish Status & Control",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 690,
+        "y": 120,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e030",
+        "type": "delay",
+        "z": "db01a0b0c0d0e000",
+        "name": "Replay Delay (2s)",
+        "pauseType": "delay",
+        "timeout": "2",
+        "timeoutUnits": "seconds",
+        "rate": "1",
+        "nbRateUnits": "1",
+        "rateUnits": "second",
+        "randomFirst": "1",
+        "randomLast": "5",
+        "randomUnits": "seconds",
+        "drop": false,
+        "allowrate": false,
+        "outputs": 1,
+        "x": 430,
+        "y": 300,
+        "wires": [
+            [
+                "db01a0b0c0d0e031"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e031",
+        "type": "function",
+        "z": "db01a0b0c0d0e000",
+        "name": "replay-forwarder",
+        "func": "// Replay buffered telemetry to ThingsBoard cloud\n// Output 1: Individual messages to ThingsBoard MQTT-out\n// Output 2: Completion signals to local MQTT-out (resume + buffer-status)\n\nvar queue = flow.get('bufferQueue') || [];\nvar queueSize = queue.length;\nvar ts = Date.now();\n\nif (queueSize === 0) {\n    node.warn('[data-buffering] info: Replay triggered but buffer is empty');\n    node.status({fill: 'green', shape: 'dot', text: 'buffer empty'});\n\n    flow.set('bufferingActive', false);\n    flow.set('bufferQueueSize', 0);\n\n    node.send([null, {\n        topic: 'nexus/internal/telemetry-publish-control',\n        payload: JSON.stringify({action: 'resume', ts: ts})\n    }]);\n    node.send([null, {\n        topic: 'nexus/internal/buffer-status',\n        payload: JSON.stringify({buffering_active: false, buffer_queue_size: 0, ts: ts})\n    }]);\n    return null;\n}\n\n// Check cloud is still connected before replaying\nif (flow.get('cloudConnected') !== true) {\n    node.warn('[data-buffering] warning: Cloud disconnected during replay \\u2014 aborting');\n    node.status({fill: 'red', shape: 'ring', text: 'replay aborted'});\n    return null;\n}\n\nnode.warn('[data-buffering] info: Replaying ' + queueSize + ' buffered messages');\n\n// Replay each message chronologically (FIFO order)\nfor (var i = 0; i < queue.length; i++) {\n    node.send([{\n        payload: queue[i],\n        topic: 'v1/devices/me/telemetry'\n    }, null]);\n}\n\n// Clear buffer\nflow.set('bufferQueue', []);\nflow.set('bufferQueueSize', 0);\nflow.set('bufferingActive', false);\n\nnode.status({fill: 'green', shape: 'dot', text: 'replayed ' + queueSize + ' msgs'});\nnode.warn('[data-buffering] info: Replay complete \\u2014 ' + queueSize + ' messages sent');\n\n// Send resume command\nnode.send([null, {\n    topic: 'nexus/internal/telemetry-publish-control',\n    payload: JSON.stringify({action: 'resume', ts: Date.now()})\n}]);\n\n// Send completion buffer status\nnode.send([null, {\n    topic: 'nexus/internal/buffer-status',\n    payload: JSON.stringify({buffering_active: false, buffer_queue_size: 0, ts: Date.now()})\n}]);\n\nreturn null;",
+        "outputs": 2,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 610,
+        "y": 300,
+        "wires": [
+            [
+                "db01a0b0c0d0e032"
+            ],
+            [
+                "db01a0b0c0d0e033"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e032",
+        "type": "mqtt out",
+        "z": "db01a0b0c0d0e000",
+        "name": "Replay to ThingsBoard",
+        "topic": "",
+        "qos": "1",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "tp01a0b0c0d0e0tb",
+        "x": 830,
+        "y": 280,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e033",
+        "type": "mqtt out",
+        "z": "db01a0b0c0d0e000",
+        "name": "Replay Complete Status",
+        "topic": "",
+        "qos": "1",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 830,
+        "y": 340,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e020",
+        "type": "mqtt in",
+        "z": "db01a0b0c0d0e000",
+        "name": "Local Normalized Telemetry",
+        "topic": "nexus/+/+/telemetry",
+        "qos": "1",
+        "datatype": "json",
+        "broker": "pn01a0b0c0d0e0bb",
+        "nl": false,
+        "rap": true,
+        "rh": 0,
+        "inputs": 0,
+        "x": 170,
+        "y": 460,
+        "wires": [
+            [
+                "db01a0b0c0d0e021"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e021",
+        "type": "function",
+        "z": "db01a0b0c0d0e000",
+        "name": "buffer-router",
+        "func": "// Route telemetry: buffer when cloud disconnected, drop when connected\n// telemetry-publish flow handles forwarding when cloud is connected\n\nvar MAX_BUFFER_SIZE = 10000; // Match Mosquitto max_queued_messages\nvar cloudConnected = flow.get('cloudConnected');\n\n// Default to connected (don't buffer) if state unknown\nif (cloudConnected !== false) {\n    return null;\n}\n\n// Store in buffer (flow context array)\nvar queue = flow.get('bufferQueue') || [];\n\n// Enforce max buffer size — drop oldest when full\nif (queue.length >= MAX_BUFFER_SIZE) {\n    queue.shift();\n    node.warn('[data-buffering] BufferFull: max size ' + MAX_BUFFER_SIZE + ' reached, dropping oldest message');\n}\n\nqueue.push(msg.payload);\nflow.set('bufferQueue', queue);\n\nvar queueSize = queue.length;\nflow.set('bufferQueueSize', queueSize);\n\nnode.status({fill: 'yellow', shape: 'ring', text: 'buffered: ' + queueSize});\n\n// Publish buffer status every 10 messages or on first message\nif (queueSize === 1 || queueSize % 10 === 0) {\n    return {\n        topic: 'nexus/internal/buffer-status',\n        payload: JSON.stringify({\n            buffering_active: true,\n            buffer_queue_size: queueSize,\n            ts: Date.now()\n        })\n    };\n}\n\nreturn null;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 400,
+        "y": 460,
+        "wires": [
+            [
+                "db01a0b0c0d0e022"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e022",
+        "type": "mqtt out",
+        "z": "db01a0b0c0d0e000",
+        "name": "Publish Buffer Status",
+        "topic": "",
+        "qos": "0",
+        "retain": "true",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 620,
+        "y": 460,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e040",
+        "type": "catch",
+        "z": "db01a0b0c0d0e000",
+        "name": "Catch Data Buffering Errors",
+        "scope": [
+            "db01a0b0c0d0e000"
+        ],
+        "uncaught": false,
+        "x": 170,
+        "y": 600,
+        "wires": [
+            [
+                "db01a0b0c0d0e041"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e041",
+        "type": "function",
+        "z": "db01a0b0c0d0e000",
+        "name": "error-log",
+        "func": "// Format error message for logging\nvar errorSource = msg.error ? msg.error.source : {};\nvar errorMsg = msg.error ? msg.error.message : 'Unknown error';\nvar nodeName = errorSource.name || errorSource.id || 'unknown';\n\nnode.warn('[data-buffering] ' + nodeName + ': ' + errorMsg);\n\nmsg.payload = JSON.stringify({\n    ts: Date.now(),\n    values: {\n        db_error_count: 1,\n        db_last_error: errorMsg.substring(0, 200)\n    }\n});\nmsg.topic = 'nexus/internal/data-buffering-errors';\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 390,
+        "y": 600,
+        "wires": [
+            [
+                "db01a0b0c0d0e042",
+                "db01a0b0c0d0e043"
+            ]
+        ]
+    },
+    {
+        "id": "db01a0b0c0d0e042",
+        "type": "mqtt out",
+        "z": "db01a0b0c0d0e000",
+        "name": "Publish Errors",
+        "topic": "",
+        "qos": "0",
+        "retain": "false",
+        "respTopic": "",
+        "contentType": "application/json",
+        "userProps": "",
+        "correl": "",
+        "expiry": "",
+        "broker": "pn01a0b0c0d0e0bb",
+        "x": 590,
+        "y": 640,
+        "wires": []
+    },
+    {
+        "id": "db01a0b0c0d0e043",
+        "type": "debug",
+        "z": "db01a0b0c0d0e000",
+        "name": "Error Output",
+        "active": true,
+        "tosidebar": true,
+        "console": false,
+        "tostatus": true,
+        "complete": "payload",
+        "targetType": "msg",
+        "statusVal": "error.message",
+        "statusType": "msg",
+        "x": 590,
+        "y": 560,
+        "wires": []
+    }
+]

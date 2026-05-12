@@ -1,0 +1,59 @@
+[
+    {
+        "id": "sf02a0b0c0d0e0f0",
+        "type": "subflow",
+        "name": "rbe-filter",
+        "info": "Report By Exception (RBE) filtering subflow.\n\nSuppresses redundant telemetry when sensor values haven't changed significantly.\nCompares each value against last-sent value using configurable deadband thresholds.\n\nInput:\n- msg.payload: {\"ts\": <epoch_ms>, \"values\": {key: val, ...}} (ThingsBoard normalized format)\n- msg.anomaly (optional): if true, bypasses filter entirely\n- msg.critical (optional): if true, bypasses filter entirely\n\nOutput:\n- msg.payload with only changed keys (values exceeding deadband), or null if all suppressed\n\nConfiguration:\n- flow context 'rbeThresholds': {telemetry_key: deadband_value} (set by config inject node)\n- Default deadband: 0 (pass everything for unconfigured keys)\n\nFiltered count:\n- Increments flow context 'rbeFilteredCount' for each suppressed key\n- Read by stats publisher node on protocol-normalization flow",
+        "category": "template-node-red-pi",
+        "in": [
+            {
+                "x": 50,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf02a0b0c0d0e0f1"
+                    }
+                ]
+            }
+        ],
+        "out": [
+            {
+                "x": 550,
+                "y": 80,
+                "wires": [
+                    {
+                        "id": "sf02a0b0c0d0e0f1",
+                        "port": 0
+                    }
+                ]
+            }
+        ],
+        "env": [],
+        "meta": {
+            "module": "template-node-red-pi",
+            "version": "1.0.0",
+            "author": "template-node-red-pi",
+            "desc": "Report By Exception telemetry filter"
+        },
+        "color": "#C0DEED",
+        "icon": "font-awesome/fa-filter"
+    },
+    {
+        "id": "sf02a0b0c0d0e0f1",
+        "type": "function",
+        "z": "sf02a0b0c0d0e0f0",
+        "name": "rbe-evaluate",
+        "func": "// RBE (Report By Exception) filtering\n// Suppresses telemetry values that haven't changed beyond deadband threshold\n// Input: msg.payload = {ts: <epoch_ms>, values: {key1: val1, ...}}\n// Output: msg with only changed keys, or null if all suppressed\n\n// --- AC #4: Critical/anomaly data bypass ---\nif (msg.anomaly === true || msg.critical === true) {\n    return msg;\n}\n\nvar payload = msg.payload;\nif (!payload || typeof payload !== 'object' || !payload.values || typeof payload.values !== 'object') {\n    node.error('[rbe-filter] EvaluateError: unexpected payload format — missing values object', msg);\n    return null;\n}\n\nvar values = payload.values;\nvar keys = Object.keys(values);\nif (keys.length === 0) {\n    return null;\n}\n\n// Load deadband config from global context (set by config inject node on parent flow)\n// NOTE: global context is required because subflow instances have isolated flow context\nvar thresholds = global.get('rbeThresholds') || {};\nvar defaultDeadband = global.get('rbeDefaultDeadband') || 0;\n\n// Load last-sent values from node context (per-instance state)\nvar lastSent = context.get('rbeLastSent') || {};\n\nvar passed = {};\nvar suppressedCount = 0;\n\nfor (var i = 0; i < keys.length; i++) {\n    var key = keys[i];\n    var currentVal = values[key];\n\n    // AC #4: bypass keys containing 'alert' or 'anomaly'\n    if (key.indexOf('alert') >= 0 || key.indexOf('anomaly') >= 0) {\n        passed[key] = currentVal;\n        lastSent[key] = currentVal;\n        continue;\n    }\n\n    // Non-numeric values always pass through (booleans, strings)\n    if (typeof currentVal !== 'number') {\n        passed[key] = currentVal;\n        lastSent[key] = currentVal;\n        continue;\n    }\n\n    var deadband = (thresholds[key] !== undefined) ? thresholds[key] : defaultDeadband;\n\n    // AC #5: First message after restart — no last-sent value\n    if (lastSent[key] === undefined || lastSent[key] === null) {\n        passed[key] = currentVal;\n        lastSent[key] = currentVal;\n        continue;\n    }\n\n    // AC #2 & #3: Compare absolute change against deadband\n    var change = Math.abs(currentVal - lastSent[key]);\n    if (change > deadband) {\n        // AC #2: exceeds deadband — pass through\n        passed[key] = currentVal;\n        lastSent[key] = currentVal;\n    } else {\n        // AC #3: within deadband — suppress\n        suppressedCount++;\n    }\n}\n\n// Save last-sent values back to node context\ncontext.set('rbeLastSent', lastSent);\n\n// AC #6: Track filtered count in global context (readable by stats publisher on parent flow)\nif (suppressedCount > 0) {\n    var currentCount = global.get('rbeFilteredCount') || 0;\n    global.set('rbeFilteredCount', currentCount + suppressedCount);\n}\n\n// AC #2/#3: Build output\nvar passedKeys = Object.keys(passed);\nif (passedKeys.length === 0) {\n    // All keys suppressed — suppress entire message\n    return null;\n}\n\n// Some keys passed — output with only passed keys\nmsg.payload = {\n    ts: payload.ts,\n    values: passed\n};\n\nreturn msg;",
+        "outputs": 1,
+        "timeout": "",
+        "noerr": 0,
+        "initialize": "",
+        "finalize": "",
+        "libs": [],
+        "x": 300,
+        "y": 80,
+        "wires": [
+            []
+        ]
+    }
+]

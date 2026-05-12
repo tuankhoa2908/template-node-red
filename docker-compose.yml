@@ -1,0 +1,140 @@
+name: template-node-red-pi
+
+services:
+  mosquitto:
+    image: "eclipse-mosquitto:2"
+    restart: always
+    ports:
+      - "127.0.0.1:1884:1883"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    volumes:
+      - mosquitto-data:/mosquitto/data
+      - mosquitto-log:/mosquitto/log
+      - ${EDGE_PROJECT_DIR:-.}/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ["CMD", "mosquitto_sub", "-t", "$$SYS/#", "-C", "1", "-i", "healthcheck", "-W", "3"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    networks:
+      - template-node-red-pidge-net
+
+  nodered:
+    build:
+      context: ${EDGE_PROJECT_DIR:-.}/nodered
+      dockerfile: Dockerfile
+    image: "template-node-red-pi-nodered:4.1.9"
+    restart: always
+    depends_on:
+      mosquitto:
+        condition: service_healthy
+    ports:
+      - "${NODERED_BIND:-127.0.0.1}:1880:1880"  # Dev: set NODERED_BIND=0.0.0.0 to expose externally
+      - "${IEC104_PORT:-2404}:2404"  # IEC104 SCADA — externally accessible for grid operator (EVN)
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    environment:
+      TZ: ${TZ:-UTC}
+      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET:?NODE_RED_CREDENTIAL_SECRET is required}
+      ZONE_ID: ${ZONE_ID:-zone-01}
+      TB_CLOUD_HOST: ${TB_CLOUD_HOST:?TB_CLOUD_HOST is required}
+      TB_CLOUD_MQTT_PORT: ${TB_CLOUD_MQTT_PORT:-8883}
+      TB_ACCESS_TOKEN: ${TB_ACCESS_TOKEN:?TB_ACCESS_TOKEN is required}
+      OPCUA_HOST: ${OPCUA_HOST:-127.0.0.1}
+      OPCUA_PORT: ${OPCUA_PORT:-4840}
+      OPCUA_DEVICE_ID: ${OPCUA_DEVICE_ID:-opcua-001}
+      BACNET_INTERFACE: ${BACNET_INTERFACE:-0.0.0.0}
+      BACNET_PORT: ${BACNET_PORT:-47808}
+      BACNET_DEVICE_ID: ${BACNET_DEVICE_ID:-bacnet-001}
+      SERIAL_PORT: ${SERIAL_PORT:-/dev/ttyUSB0}
+      SERIAL_BAUD: ${SERIAL_BAUD:-9600}
+      MODBUS_RTU_UNIT_ID: ${MODBUS_RTU_UNIT_ID:-1}
+      MODBUS_RTU_POLL_INTERVAL_MS: ${MODBUS_RTU_POLL_INTERVAL_MS:-30000}
+      IEC104_PORT: ${IEC104_PORT:-2404}
+      IEC104_COMMON_ADDRESS: ${IEC104_COMMON_ADDRESS:-1}
+      IEC104_SIM_INTERVAL: ${IEC104_SIM_INTERVAL:-0}
+      MODBUS_HOST: ${MODBUS_HOST:-127.0.0.1}
+      MODBUS_PORT: ${MODBUS_PORT:-502}
+      MODBUS_EXPORT_LIMIT_MIN: ${MODBUS_EXPORT_LIMIT_MIN:-0}
+      MODBUS_EXPORT_LIMIT_MAX: ${MODBUS_EXPORT_LIMIT_MAX:-100}
+      RBE_DEADBAND_TEMPERATURE_C: ${RBE_DEADBAND_TEMPERATURE_C:-0.5}
+      RBE_DEADBAND_VIBRATION_MM_S: ${RBE_DEADBAND_VIBRATION_MM_S:-0.1}
+      RBE_DEADBAND_POWER_DRAW_KW: ${RBE_DEADBAND_POWER_DRAW_KW:-0.5}
+      RBE_DEADBAND_DEFAULT: ${RBE_DEADBAND_DEFAULT:-0}
+    env_file:
+      - .env
+    # Uncomment to enable serial/RS-485 access for Modbus RTU (Story 1.7)
+    # devices:
+    #   - "/dev/ttyUSB0:/dev/ttyUSB0"
+    volumes:
+      - nodered-data:/data
+      - ${EDGE_PROJECT_DIR:-.}/nodered/settings.js:/data/settings.js:ro
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:1880/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - template-node-red-pidge-net
+
+  netdata:
+    image: "netdata/netdata:stable"
+    restart: always
+    ports:
+      - "127.0.0.1:19999:19999"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "50m"
+        max-file: "5"
+    cap_add:
+      - SYS_PTRACE
+      - SYS_ADMIN
+    security_opt:
+      - apparmor:unconfined
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /etc/os-release:/host/etc/os-release:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ${EDGE_PROJECT_DIR:-.}/netdata/netdata.conf:/etc/netdata/netdata.conf:ro
+      - ${EDGE_PROJECT_DIR:-.}/netdata/health.d/:/etc/netdata/health.d/:ro
+    tmpfs:
+      - /var/lib/netdata:size=50m
+      - /var/cache/netdata:size=50m
+      - /var/log:size=50m
+    environment:
+      NETDATA_LISTENER_PORT: "19999"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://127.0.0.1:19999/api/v1/info || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - template-node-red-pidge-net
+
+networks:
+  template-node-red-pidge-net:
+    name: template-node-red-pidge-net
+    driver: bridge
+
+volumes:
+  mosquitto-data:
+    name: template-node-red-pi-mosquitto-data
+    driver: local
+  mosquitto-log:  # Low-write: Mosquitto's own logs, kept on disk
+    name: template-node-red-pi-mosquitto-log
+    driver: local
+  nodered-data:
+    name: template-node-red-pi-nodered-data
+    driver: local

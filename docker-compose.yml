@@ -5,7 +5,7 @@ services:
     image: "eclipse-mosquitto:2"
     restart: always
     ports:
-      - "127.0.0.1:1884:1883"
+      - "127.0.0.1:1883:1883"
     logging:
       driver: "json-file"
       options:

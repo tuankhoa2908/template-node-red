@@ -1,0 +1,136 @@
+[
+  {
+    "id": "sf_config_load_site_profile",
+    "type": "subflow",
+    "name": "SF_CONFIG_LOAD_SITE_PROFILE",
+    "info": "Load site profile JSON from SITE_CONFIG_PATH, validate it, then store:\n- global.siteConfig\n- global.iec104_templates\n\nOutput 1: loaded config summary.\nOutput 2: error object.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cfg_set_filename"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 760,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cfg_store_site",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 760,
+        "y": 140,
+        "wires": [
+          {
+            "id": "cfg_store_site",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "SITE_CONFIG_PATH",
+        "type": "str",
+        "value": "/data/config/site.solis.json"
+      },
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#C7E9B0"
+  },
+  {
+    "id": "cfg_set_filename",
+    "type": "function",
+    "z": "sf_config_load_site_profile",
+    "name": "Set filename from env",
+    "func": "const filename = env.get(\"SITE_CONFIG_PATH\") || \"/data/config/site.solis.json\";\nmsg.filename = filename;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 180,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_file_in"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_file_in",
+    "type": "file in",
+    "z": "sf_config_load_site_profile",
+    "name": "Read site config",
+    "filename": "filename",
+    "filenameType": "msg",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": true,
+    "encoding": "none",
+    "allProps": false,
+    "x": 370,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_json_parse"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_json_parse",
+    "type": "json",
+    "z": "sf_config_load_site_profile",
+    "name": "JSON parse",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 530,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_store_site"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_store_site",
+    "type": "function",
+    "z": "sf_config_load_site_profile",
+    "name": "Validate + store site config",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\n\nfunction fail(message) {\n    node.status({ fill: \"red\", shape: \"ring\", text: message });\n    return [null, { payload: { ok: false, error: message } }];\n}\n\nconst cfg = msg.payload;\nif (!cfg || typeof cfg !== \"object\") return fail(\"site config is not an object\");\nif (!cfg.site) return fail(\"missing site\");\nif (!Array.isArray(cfg.iec104Points)) return fail(\"missing iec104Points[]\");\nif (!Array.isArray(cfg.iec104Commands)) cfg.iec104Commands = [];\nif (!Array.isArray(cfg.modbusReads)) cfg.modbusReads = [];\nif (!cfg.mqttPayload) cfg.mqttPayload = { fields: [] };\n\nconst deviceId = cfg.site.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\ncfg.site.deviceId = deviceId;\n\nfunction normalizePoint(p, isCommand) {\n    const out = Object.assign({}, p);\n    if (!isCommand && out.name && !String(out.name).startsWith(deviceId + \"_\")) {\n        out.name = `${deviceId}_${out.name}`;\n    }\n    return out;\n}\n\nconst points = cfg.iec104Points.map(p => normalizePoint(p, false));\nconst commands = cfg.iec104Commands.map(p => normalizePoint(p, true));\nconst templates = points.concat(commands);\n\nglobal.set(\"siteConfig\", cfg, store);\nglobal.set(\"iec104_templates\", templates, store);\n\n// Also set without explicit store for compatibility with older nodes.\nglobal.set(\"siteConfig\", cfg);\nglobal.set(\"iec104_templates\", templates);\n\nmsg.siteConfig = cfg;\nmsg.iec104_templates = templates;\nmsg.payload = {\n    ok: true,\n    siteId: cfg.site.siteId,\n    deviceId,\n    pointCount: points.length,\n    commandCount: commands.length,\n    modbusReadCount: cfg.modbusReads.length\n};\n\nnode.status({\n    fill: \"green\",\n    shape: \"dot\",\n    text: `${deviceId}: ${templates.length} IEC104 mappings`\n});\n\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  }
+]

@@ -1,0 +1,116 @@
+[
+  {
+    "id": "sf_iec104_server_bridge",
+    "type": "subflow",
+    "name": "SF_IEC104_SERVER_BRIDGE",
+    "info": "Bridge Node-RED messages to an external json-iec104-server daemon.\nInput: IEC104 point/control JSON messages for daemon stdin.\nOutput: JSON messages emitted by daemon stdout, usually IEC104 command events.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_to_daemon_string"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 840,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_json_parse",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "IEC104_DAEMON_PATH",
+        "type": "str",
+        "value": "/usr/local/bin/json-iec104-server"
+      }
+    ],
+    "meta": {},
+    "color": "#F7B267"
+  },
+  {
+    "id": "iec104_to_daemon_string",
+    "type": "function",
+    "z": "sf_iec104_server_bridge",
+    "name": "Prepare line for daemon",
+    "func": "if (typeof msg.payload === \"string\") {\n    if (!msg.payload.endsWith(\"\\n\")) msg.payload += \"\\n\";\n    return msg;\n}\n\nmsg.payload = JSON.stringify(msg.payload) + \"\\n\";\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 220,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_daemon"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_daemon",
+    "type": "daemon",
+    "z": "sf_iec104_server_bridge",
+    "name": "json-iec104-server",
+    "command": "${IEC104_DAEMON_PATH}",
+    "args": "",
+    "autorun": true,
+    "cr": true,
+    "redo": true,
+    "op": "string",
+    "closer": "SIGINT",
+    "icon": "font-awesome/fa-server",
+    "x": 430,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_split_lines"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_split_lines",
+    "type": "function",
+    "z": "sf_iec104_server_bridge",
+    "name": "Split stdout lines",
+    "func": "const text = String(msg.payload || \"\");\nconst lines = text.split(\"\\n\").map(s => s.trim()).filter(s => s.length > 2);\nreturn [lines.map(line => ({ payload: line }))];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 620,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_json_parse"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_json_parse",
+    "type": "json",
+    "z": "sf_iec104_server_bridge",
+    "name": "Parse daemon JSON",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 790,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  }
+]

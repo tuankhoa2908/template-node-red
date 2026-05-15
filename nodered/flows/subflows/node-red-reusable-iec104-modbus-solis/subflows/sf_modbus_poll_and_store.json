@@ -1,0 +1,153 @@
+[
+  {
+    "id": "sf_modbus_poll_and_store",
+    "type": "subflow",
+    "name": "SF_MODBUS_POLL_AND_STORE",
+    "info": "Build Modbus read requests from global.siteConfig.modbusReads, execute them by modbus-flex-getter,\nparse each response, and store values to global context as DEVICE_ID_fieldName.\n\nOutput 1: parsed value update.\nOutput 2: parse/read error.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_build_reads"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 900,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_parse_store",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 140,
+        "wires": [
+          {
+            "id": "mb_parse_store",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#BFD7EA"
+  },
+  {
+    "id": "mb_build_reads",
+    "type": "function",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Build Modbus read requests",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst reads = Array.isArray(cfg.modbusReads) ? cfg.modbusReads : [];\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nif (!reads.length) {\n    node.status({ fill: \"yellow\", shape: \"ring\", text: \"no modbusReads[]\" });\n    return null;\n}\n\nconst batchId = `modbus-${Date.now()}`;\nconst out = reads.map((r, index) => ({\n    payload: {\n        fc: Number(r.fc),\n        unitid: Number(r.unitid),\n        address: Number(r.address),\n        quantity: Number(r.quantity)\n    },\n    readDef: r,\n    deviceId,\n    parts: {\n        id: batchId,\n        index,\n        count: reads.length,\n        type: \"array\"\n    }\n}));\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: `${reads.length} read requests` });\nreturn [out];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 230,
+    "y": 80,
+    "wires": [
+      [
+        "mb_flex_getter"
+      ]
+    ]
+  },
+  {
+    "id": "mb_flex_getter",
+    "type": "modbus-flex-getter",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Modbus getter",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "cfg_modbus_client_env",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 470,
+    "y": 80,
+    "wires": [
+      [
+        "mb_parse_store"
+      ],
+      [
+        "mb_parse_store"
+      ]
+    ]
+  },
+  {
+    "id": "mb_parse_store",
+    "type": "function",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Parse response + store global",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\n\nfunction toRegisters(msg) {\n    if (Array.isArray(msg.payload)) return msg.payload;\n    if (msg.payload && Array.isArray(msg.payload.data)) return msg.payload.data;\n    if (msg.responseBuffer && Array.isArray(msg.responseBuffer.data)) return msg.responseBuffer.data;\n    if (msg.payload && Buffer.isBuffer(msg.payload.buffer)) {\n        const b = msg.payload.buffer;\n        const regs = [];\n        for (let i = 0; i + 1 < b.length; i += 2) regs.push(b.readUInt16BE(i));\n        return regs;\n    }\n    if (Buffer.isBuffer(msg.payload)) {\n        const regs = [];\n        for (let i = 0; i + 1 < msg.payload.length; i += 2) regs.push(msg.payload.readUInt16BE(i));\n        return regs;\n    }\n    return null;\n}\n\nfunction regBuffer(regs, order) {\n    const r0 = Number(regs[0] || 0);\n    const r1 = Number(regs[1] || 0);\n    const b = Buffer.alloc(4);\n    const mode = String(order || \"BE\").toUpperCase();\n\n    // BE/ABCD: reg0 high-low, reg1 high-low.\n    // LE/CDAB/LE_WORD: reg1 high-low, reg0 high-low.\n    // BADC: reg0 low-high, reg1 low-high.\n    // DCBA/LE_BYTE_WORD: reg1 low-high, reg0 low-high.\n    if (mode === \"LE\" || mode === \"CDAB\" || mode === \"LE_WORD\") {\n        b.writeUInt16BE(r1, 0); b.writeUInt16BE(r0, 2);\n    } else if (mode === \"BADC\") {\n        b[0] = r0 & 0xff; b[1] = (r0 >> 8) & 0xff;\n        b[2] = r1 & 0xff; b[3] = (r1 >> 8) & 0xff;\n    } else if (mode === \"DCBA\" || mode === \"LE_BYTE_WORD\") {\n        b[0] = r1 & 0xff; b[1] = (r1 >> 8) & 0xff;\n        b[2] = r0 & 0xff; b[3] = (r0 >> 8) & 0xff;\n    } else {\n        b.writeUInt16BE(r0, 0); b.writeUInt16BE(r1, 2);\n    }\n    return b;\n}\n\nfunction parseValue(regs, def) {\n    const datatype = String(def.datatype || \"uint16\").toLowerCase();\n    const order = def.byteOrder || def.wordOrder || \"BE\";\n\n    if (datatype === \"bool\" || datatype === \"boolean\" || Number(def.fc) === 1 || Number(def.fc) === 2) {\n        return regs[0] ? 1 : 0;\n    }\n\n    if (datatype === \"int16\") return Buffer.from([(regs[0] >> 8) & 0xff, regs[0] & 0xff]).readInt16BE(0);\n    if (datatype === \"uint16\") return Number(regs[0]);\n\n    const b = regBuffer(regs, order);\n\n    if (datatype === \"int32\") return b.readInt32BE(0);\n    if (datatype === \"uint32\") return b.readUInt32BE(0);\n    if (datatype === \"float\" || datatype === \"float32\" || datatype === \"floatbe\" || datatype === \"floatle\") {\n        return b.readFloatBE(0);\n    }\n\n    throw new Error(`unsupported datatype: ${datatype}`);\n}\n\ntry {\n    const def = msg.readDef;\n    if (!def || !def.name) throw new Error(\"missing msg.readDef.name\");\n\n    const regs = toRegisters(msg);\n    if (!regs || !regs.length) throw new Error(`no Modbus data for ${def.name}`);\n\n    let value = parseValue(regs, def);\n    const scale = Number(def.readScale ?? 1);\n    const offset = Number(def.offset ?? 0);\n    if (Number.isFinite(scale)) value *= scale;\n    if (Number.isFinite(offset)) value += offset;\n\n    const deviceId = msg.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\n    const fullKey = `${deviceId}_${def.name}`;\n\n    global.set(fullKey, value, store);\n    global.set(fullKey, value);\n\n    msg.payload = { [fullKey]: value };\n    msg.topic = fullKey;\n    msg.value = value;\n\n    node.status({ fill: \"green\", shape: \"dot\", text: `${fullKey}=${value}` });\n    return [msg, null];\n} catch (err) {\n    node.status({ fill: \"red\", shape: \"ring\", text: err.message });\n    msg.payload = { ok: false, error: err.message, readDef: msg.readDef };\n    return [null, msg];\n}",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "cfg_modbus_client_env",
+    "type": "modbus-client",
+    "name": "MODBUS_CLIENT_FROM_ENV",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${MODBUS_HOST}",
+    "tcpPort": "${MODBUS_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "1",
+    "commandDelay": "50",
+    "clientTimeout": "${MODBUS_TIMEOUT_MS}",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "${MODBUS_RECONNECT_MS}",
+    "parallelUnitIdsAllowed": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": false
+  }
+]

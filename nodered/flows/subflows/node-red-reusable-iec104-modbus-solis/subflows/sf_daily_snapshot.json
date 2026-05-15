@@ -1,0 +1,74 @@
+[
+  {
+    "id": "sf_daily_snapshot",
+    "type": "subflow",
+    "name": "SF_DAILY_SNAPSHOT",
+    "info": "Snapshot one global key into another. Manual numeric payload overrides source value; otherwise uses configured source key.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "daily_snapshot_fn"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 620,
+        "y": 80,
+        "wires": [
+          {
+            "id": "daily_snapshot_fn",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      },
+      {
+        "name": "SNAPSHOT_SOURCE",
+        "type": "str",
+        "value": "a_Inv_D"
+      },
+      {
+        "name": "SNAPSHOT_TARGET",
+        "type": "str",
+        "value": "a_Inv_D1"
+      }
+    ],
+    "meta": {},
+    "color": "#FFB4B4"
+  },
+  {
+    "id": "daily_snapshot_fn",
+    "type": "function",
+    "z": "sf_daily_snapshot",
+    "name": "Snapshot global value",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nconst sourceShort = (cfg.snapshot && cfg.snapshot.source) || env.get(\"SNAPSHOT_SOURCE\") || \"a_Inv_D\";\nconst targetShort = (cfg.snapshot && cfg.snapshot.target) || env.get(\"SNAPSHOT_TARGET\") || \"a_Inv_D1\";\n\nconst sourceKey = String(sourceShort).startsWith(deviceId + \"_\") ? sourceShort : `${deviceId}_${sourceShort}`;\nconst targetKey = String(targetShort).startsWith(deviceId + \"_\") ? targetShort : `${deviceId}_${targetShort}`;\n\nconst toNum = v => {\n    const n = Number(v);\n    return Number.isFinite(n) ? n : NaN;\n};\n\nlet val = toNum(msg.payload);\nif (Number.isNaN(val)) val = toNum(global.get(sourceKey, store));\n\nif (Number.isNaN(val)) {\n    node.status({ fill: \"red\", shape: \"ring\", text: `no numeric ${sourceKey}` });\n    return null;\n}\n\nglobal.set(targetKey, val, store);\nglobal.set(`${targetKey}_ts`, Date.now(), store);\nglobal.set(targetKey, val);\nglobal.set(`${targetKey}_ts`, Date.now());\n\nmsg.payload = { [targetKey]: val, ts: Date.now() };\nnode.status({ fill: \"green\", shape: \"dot\", text: `${targetKey}=${val}` });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  }
+]

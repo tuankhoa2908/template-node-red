@@ -1,0 +1,59 @@
+[
+  {
+    "id": "sf_modbus_status_to_online_flag",
+    "type": "subflow",
+    "name": "SF_MODBUS_STATUS_TO_ONLINE_FLAG",
+    "info": "Convert status messages from a Node-RED status node into global.modbus_online and optional IEC104 invalid events.\nConnect a Status node scoped to your Modbus getter/write nodes into this subflow.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_status_flag"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 520,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_status_flag",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#F4D35E"
+  },
+  {
+    "id": "mb_status_flag",
+    "type": "function",
+    "z": "sf_modbus_status_to_online_flag",
+    "name": "Status → global.modbus_online",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst t = (msg.status && msg.status.text) ? String(msg.status.text).toLowerCase() : String(msg.payload || \"\").toLowerCase();\n\nlet online = global.get(\"modbus_online\", store);\nlet eventPayload = \"status-check\";\n\nif (t.includes(\"reconnecting\") || t.includes(\"timeout\") || t.includes(\"error\") || t === \"initialize\" || t.includes(\"not connected\")) {\n    online = false;\n    eventPayload = \"invalid\";\n} else if (t.includes(\"connected\") || t.includes(\"active\") || t.includes(\"queue empty\")) {\n    online = true;\n    eventPayload = \"online\";\n}\n\nglobal.set(\"modbus_online\", !!online, store);\nglobal.set(\"modbus_online\", !!online);\n\nnode.status({\n    fill: online ? \"green\" : \"red\",\n    shape: \"dot\",\n    text: online ? \"Modbus online\" : \"Modbus offline\"\n});\n\nmsg.payload = eventPayload;\nmsg.modbus_online = !!online;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 300,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  }
+]

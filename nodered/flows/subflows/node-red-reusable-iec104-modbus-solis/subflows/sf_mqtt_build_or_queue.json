@@ -1,0 +1,124 @@
+[
+  {
+    "id": "sf_mqtt_build_or_queue",
+    "type": "subflow",
+    "name": "SF_MQTT_BUILD_OR_QUEUE",
+    "info": "Build cloud MQTT payload from global values and siteConfig.mqttPayload.fields.\nIf internetAvailable=true and queue is empty, emits realtime message.\nIf offline, queues sampled payloads.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_build_queue"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 640,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_build_queue",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      },
+      {
+        "name": "MQTT_TOPIC",
+        "type": "str",
+        "value": "tichhop-vhouse/pms/tichhop-vhouse/det-chungtien"
+      },
+      {
+        "name": "QUEUE_MAX_SIZE",
+        "type": "num",
+        "value": "10000"
+      },
+      {
+        "name": "QUEUE_SAMPLE_INTERVAL_SECONDS",
+        "type": "num",
+        "value": "300"
+      }
+    ],
+    "meta": {},
+    "color": "#99DBF5"
+  },
+  {
+    "id": "mqtt_build_queue",
+    "type": "function",
+    "z": "sf_mqtt_build_or_queue",
+    "name": "Build MQTT payload or queue",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst site = cfg.site || {};\nconst deviceId = site.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\nconst fields = (cfg.mqttPayload && Array.isArray(cfg.mqttPayload.fields)) ? cfg.mqttPayload.fields : [];\n\nfunction roundByScale(num, scale) {\n    if (!Number.isFinite(num)) return num;\n    if (!scale || scale === 1) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(Math.abs(scale))));\n    return Number(num.toFixed(decimals));\n}\n\nconst result = {};\nfor (const field of fields) {\n    const fullKey = String(field).startsWith(deviceId + \"_\") ? field : `${deviceId}_${field}`;\n    const raw = global.get(fullKey, store);\n    const template = templates.find(t => t.name === fullKey);\n    const scale = Number((template && template.scale !== undefined) ? template.scale : 1);\n    if (raw === undefined || raw === null || Number.isNaN(Number(raw))) {\n        result[field.replace(deviceId + \"_\", \"\")] = null;\n    } else {\n        result[field.replace(deviceId + \"_\", \"\")] = roundByScale(Number(raw) * scale, scale);\n    }\n}\n\nmsg.topic = env.get(\"MQTT_TOPIC\") || (cfg.mqtt && cfg.mqtt.topic) || \"\";\nmsg.payload = [{\n    name: site.siteName || site.siteId || deviceId,\n    type: site.projectType || \"104_SOL\",\n    ts: Math.floor(Date.now() / 1000),\n    ...result\n}];\n\nconst online = global.get(\"internetAvailable\", store) === true;\nlet queue = flow.get(\"mqtt_queue\") || [];\nconst maxQueueSize = Number(env.get(\"QUEUE_MAX_SIZE\") || 10000);\nconst sampleIntervalMs = Number(env.get(\"QUEUE_SAMPLE_INTERVAL_SECONDS\") || 300) * 1000;\nconst now = Date.now();\nconst lastQueueTime = flow.get(\"mqtt_last_queue_time\") || 0;\n\nconst publishMsg = { topic: msg.topic, payload: msg.payload };\n\nif (online && queue.length === 0) {\n    node.status({ fill: \"green\", shape: \"dot\", text: \"publish realtime\" });\n    return publishMsg;\n}\n\nif (!online && (now - lastQueueTime >= sampleIntervalMs)) {\n    if (queue.length >= maxQueueSize) queue.shift();\n    queue.push(publishMsg);\n    flow.set(\"mqtt_queue\", queue);\n    flow.set(\"mqtt_last_queue_time\", now);\n    node.status({ fill: \"yellow\", shape: \"ring\", text: `queued ${queue.length}` });\n} else if (online && queue.length > 0) {\n    if (queue.length >= maxQueueSize) queue.shift();\n    queue.push(publishMsg);\n    flow.set(\"mqtt_queue\", queue);\n    node.status({ fill: \"blue\", shape: \"ring\", text: `queue pending ${queue.length}` });\n} else {\n    node.status({ fill: \"grey\", shape: \"ring\", text: `skip queue ${queue.length}` });\n}\n\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cfg_mqtt_tls_env",
+    "type": "tls-config",
+    "name": "MQTT_TLS_FROM_ENV",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "${MQTT_CERT}",
+    "keyname": "${MQTT_KEY}",
+    "caname": "${MQTT_CA}",
+    "servername": "",
+    "verifyservercert": "${MQTT_VERIFY_SERVER_CERT}",
+    "alpnprotocol": ""
+  },
+  {
+    "id": "cfg_mqtt_broker_env",
+    "type": "mqtt-broker",
+    "name": "MQTT_BROKER_FROM_ENV",
+    "broker": "${MQTT_HOST}",
+    "port": "${MQTT_PORT}",
+    "tls": "cfg_mqtt_tls_env",
+    "clientid": "${MQTT_CLIENT_ID}",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

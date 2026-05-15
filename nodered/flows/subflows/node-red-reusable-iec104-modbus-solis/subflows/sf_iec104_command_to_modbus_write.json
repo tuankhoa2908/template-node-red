@@ -1,0 +1,121 @@
+[
+  {
+    "id": "sf_iec104_command_to_modbus_write",
+    "type": "subflow",
+    "name": "SF_IEC104_COMMAND_TO_MODBUS_WRITE",
+    "info": "Convert IEC104 execute commands to Modbus write payloads using global.iec104_templates, then write via modbus-flex-write.\nOutput 1: Modbus write success output.\nOutput 2: Modbus write error output.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cmd_to_modbus_payload"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 760,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cmd_modbus_write",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 760,
+        "y": 140,
+        "wires": [
+          {
+            "id": "cmd_modbus_write",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#E2C2FF"
+  },
+  {
+    "id": "cmd_to_modbus_payload",
+    "type": "function",
+    "z": "sf_iec104_command_to_modbus_write",
+    "name": "IEC104 command → Modbus write",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst cmd = msg.payload || {};\n\n// Only execute should write to Modbus. Select/check events are intentionally ignored.\nif (cmd.action && cmd.action !== \"execute\") {\n    node.status({ fill: \"grey\", shape: \"ring\", text: `ignored action=${cmd.action}` });\n    return null;\n}\n\nconst matched = templates.find(e => e.type === cmd.type && Number(e.address) === Number(cmd.address));\n\nif (!matched) {\n    node.warn(`No command mapping for type=${cmd.type}, IOA=${cmd.address}`);\n    node.status({ fill: \"red\", shape: \"ring\", text: \"mapping not found\" });\n    return null;\n}\n\nif (matched.datatype === \"bool\" || matched.datatype === \"boolean\") {\n    const b = !!(cmd.value === true || cmd.value === 1 || cmd.value === \"1\");\n    const coilOn = (matched.coilOn !== undefined) ? matched.coilOn : 1;\n    const coilOff = (matched.coilOff !== undefined) ? matched.coilOff : 0;\n\n    msg.payload = {\n        fc: 5,\n        unitid: Number(matched.unitid),\n        address: Number(matched.modbusAddress),\n        value: b ? coilOn : coilOff,\n        quantity: 1\n    };\n\n    node.status({ fill: \"blue\", shape: \"dot\", text: `${matched.name}=${b ? 1 : 0}` });\n    return msg;\n}\n\nconst scale = (matched.scale != null) ? Number(matched.scale) : 1;\nconst value = Number(cmd.value) * scale;\nconst buf = Buffer.alloc(4);\n\nconst outPayload = {\n    fc: 16,\n    unitid: Number(matched.unitid),\n    address: Number(matched.modbusAddress),\n    quantity: 2,\n    value: []\n};\n\nswitch (String(matched.datatype || \"\").toLowerCase()) {\n    case \"int16\":\n    case \"uint16\":\n        outPayload.fc = 6;\n        outPayload.quantity = 1;\n        outPayload.value = Math.round(value);\n        break;\n\n    case \"int32\":\n        buf.writeInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"uint32\":\n        buf.writeUInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeUInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"float\":\n    case \"float32\":\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeFloatBE(value);\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    default:\n        node.error(`Unsupported datatype: ${matched.datatype}`, msg);\n        node.status({ fill: \"red\", shape: \"ring\", text: `bad datatype ${matched.datatype}` });\n        return null;\n}\n\nmsg.payload = outPayload;\nnode.status({ fill: \"blue\", shape: \"dot\", text: `${matched.name} write` });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 80,
+    "wires": [
+      [
+        "cmd_modbus_write"
+      ]
+    ]
+  },
+  {
+    "id": "cmd_modbus_write",
+    "type": "modbus-flex-write",
+    "z": "sf_iec104_command_to_modbus_write",
+    "name": "Modbus writer",
+    "showStatusActivities": false,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg_modbus_client_env",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 600,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "cfg_modbus_client_env",
+    "type": "modbus-client",
+    "name": "MODBUS_CLIENT_FROM_ENV",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${MODBUS_HOST}",
+    "tcpPort": "${MODBUS_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "1",
+    "commandDelay": "50",
+    "clientTimeout": "${MODBUS_TIMEOUT_MS}",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "${MODBUS_RECONNECT_MS}",
+    "parallelUnitIdsAllowed": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": false
+  }
+]

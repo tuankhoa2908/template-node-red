@@ -1,0 +1,917 @@
+[
+  {
+    "id": "sf_config_load_site_profile",
+    "type": "subflow",
+    "name": "SF_CONFIG_LOAD_SITE_PROFILE",
+    "info": "Load site profile JSON from SITE_CONFIG_PATH, validate it, then store:\n- global.siteConfig\n- global.iec104_templates\n\nOutput 1: loaded config summary.\nOutput 2: error object.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cfg_set_filename"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 760,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cfg_store_site",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 760,
+        "y": 140,
+        "wires": [
+          {
+            "id": "cfg_store_site",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "SITE_CONFIG_PATH",
+        "type": "str",
+        "value": "/data/config/site.solis.json"
+      },
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#C7E9B0"
+  },
+  {
+    "id": "cfg_set_filename",
+    "type": "function",
+    "z": "sf_config_load_site_profile",
+    "name": "Set filename from env",
+    "func": "const filename = env.get(\"SITE_CONFIG_PATH\") || \"/data/config/site.solis.json\";\nmsg.filename = filename;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 180,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_file_in"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_file_in",
+    "type": "file in",
+    "z": "sf_config_load_site_profile",
+    "name": "Read site config",
+    "filename": "filename",
+    "filenameType": "msg",
+    "format": "utf8",
+    "chunk": false,
+    "sendError": true,
+    "encoding": "none",
+    "allProps": false,
+    "x": 370,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_json_parse"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_json_parse",
+    "type": "json",
+    "z": "sf_config_load_site_profile",
+    "name": "JSON parse",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 530,
+    "y": 80,
+    "wires": [
+      [
+        "cfg_store_site"
+      ]
+    ]
+  },
+  {
+    "id": "cfg_store_site",
+    "type": "function",
+    "z": "sf_config_load_site_profile",
+    "name": "Validate + store site config",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\n\nfunction fail(message) {\n    node.status({ fill: \"red\", shape: \"ring\", text: message });\n    return [null, { payload: { ok: false, error: message } }];\n}\n\nconst cfg = msg.payload;\nif (!cfg || typeof cfg !== \"object\") return fail(\"site config is not an object\");\nif (!cfg.site) return fail(\"missing site\");\nif (!Array.isArray(cfg.iec104Points)) return fail(\"missing iec104Points[]\");\nif (!Array.isArray(cfg.iec104Commands)) cfg.iec104Commands = [];\nif (!Array.isArray(cfg.modbusReads)) cfg.modbusReads = [];\nif (!cfg.mqttPayload) cfg.mqttPayload = { fields: [] };\n\nconst deviceId = cfg.site.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\ncfg.site.deviceId = deviceId;\n\nfunction normalizePoint(p, isCommand) {\n    const out = Object.assign({}, p);\n    if (!isCommand && out.name && !String(out.name).startsWith(deviceId + \"_\")) {\n        out.name = `${deviceId}_${out.name}`;\n    }\n    return out;\n}\n\nconst points = cfg.iec104Points.map(p => normalizePoint(p, false));\nconst commands = cfg.iec104Commands.map(p => normalizePoint(p, true));\nconst templates = points.concat(commands);\n\nglobal.set(\"siteConfig\", cfg, store);\nglobal.set(\"iec104_templates\", templates, store);\n\n// Also set without explicit store for compatibility with older nodes.\nglobal.set(\"siteConfig\", cfg);\nglobal.set(\"iec104_templates\", templates);\n\nmsg.siteConfig = cfg;\nmsg.iec104_templates = templates;\nmsg.payload = {\n    ok: true,\n    siteId: cfg.site.siteId,\n    deviceId,\n    pointCount: points.length,\n    commandCount: commands.length,\n    modbusReadCount: cfg.modbusReads.length\n};\n\nnode.status({\n    fill: \"green\",\n    shape: \"dot\",\n    text: `${deviceId}: ${templates.length} IEC104 mappings`\n});\n\nreturn [msg, null];",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 700,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "sf_modbus_poll_and_store",
+    "type": "subflow",
+    "name": "SF_MODBUS_POLL_AND_STORE",
+    "info": "Build Modbus read requests from global.siteConfig.modbusReads, execute them by modbus-flex-getter,\nparse each response, and store values to global context as DEVICE_ID_fieldName.\n\nOutput 1: parsed value update.\nOutput 2: parse/read error.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_build_reads"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 900,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_parse_store",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 900,
+        "y": 140,
+        "wires": [
+          {
+            "id": "mb_parse_store",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#BFD7EA"
+  },
+  {
+    "id": "mb_build_reads",
+    "type": "function",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Build Modbus read requests",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst reads = Array.isArray(cfg.modbusReads) ? cfg.modbusReads : [];\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nif (!reads.length) {\n    node.status({ fill: \"yellow\", shape: \"ring\", text: \"no modbusReads[]\" });\n    return null;\n}\n\nconst batchId = `modbus-${Date.now()}`;\nconst out = reads.map((r, index) => ({\n    payload: {\n        fc: Number(r.fc),\n        unitid: Number(r.unitid),\n        address: Number(r.address),\n        quantity: Number(r.quantity)\n    },\n    readDef: r,\n    deviceId,\n    parts: {\n        id: batchId,\n        index,\n        count: reads.length,\n        type: \"array\"\n    }\n}));\n\nnode.status({ fill: \"blue\", shape: \"dot\", text: `${reads.length} read requests` });\nreturn [out];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 230,
+    "y": 80,
+    "wires": [
+      [
+        "mb_flex_getter"
+      ]
+    ]
+  },
+  {
+    "id": "mb_flex_getter",
+    "type": "modbus-flex-getter",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Modbus getter",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "cfg_modbus_client_env",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 470,
+    "y": 80,
+    "wires": [
+      [
+        "mb_parse_store"
+      ],
+      [
+        "mb_parse_store"
+      ]
+    ]
+  },
+  {
+    "id": "mb_parse_store",
+    "type": "function",
+    "z": "sf_modbus_poll_and_store",
+    "name": "Parse response + store global",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\n\nfunction toRegisters(msg) {\n    if (Array.isArray(msg.payload)) return msg.payload;\n    if (msg.payload && Array.isArray(msg.payload.data)) return msg.payload.data;\n    if (msg.responseBuffer && Array.isArray(msg.responseBuffer.data)) return msg.responseBuffer.data;\n    if (msg.payload && Buffer.isBuffer(msg.payload.buffer)) {\n        const b = msg.payload.buffer;\n        const regs = [];\n        for (let i = 0; i + 1 < b.length; i += 2) regs.push(b.readUInt16BE(i));\n        return regs;\n    }\n    if (Buffer.isBuffer(msg.payload)) {\n        const regs = [];\n        for (let i = 0; i + 1 < msg.payload.length; i += 2) regs.push(msg.payload.readUInt16BE(i));\n        return regs;\n    }\n    return null;\n}\n\nfunction regBuffer(regs, order) {\n    const r0 = Number(regs[0] || 0);\n    const r1 = Number(regs[1] || 0);\n    const b = Buffer.alloc(4);\n    const mode = String(order || \"BE\").toUpperCase();\n\n    // BE/ABCD: reg0 high-low, reg1 high-low.\n    // LE/CDAB/LE_WORD: reg1 high-low, reg0 high-low.\n    // BADC: reg0 low-high, reg1 low-high.\n    // DCBA/LE_BYTE_WORD: reg1 low-high, reg0 low-high.\n    if (mode === \"LE\" || mode === \"CDAB\" || mode === \"LE_WORD\") {\n        b.writeUInt16BE(r1, 0); b.writeUInt16BE(r0, 2);\n    } else if (mode === \"BADC\") {\n        b[0] = r0 & 0xff; b[1] = (r0 >> 8) & 0xff;\n        b[2] = r1 & 0xff; b[3] = (r1 >> 8) & 0xff;\n    } else if (mode === \"DCBA\" || mode === \"LE_BYTE_WORD\") {\n        b[0] = r1 & 0xff; b[1] = (r1 >> 8) & 0xff;\n        b[2] = r0 & 0xff; b[3] = (r0 >> 8) & 0xff;\n    } else {\n        b.writeUInt16BE(r0, 0); b.writeUInt16BE(r1, 2);\n    }\n    return b;\n}\n\nfunction parseValue(regs, def) {\n    const datatype = String(def.datatype || \"uint16\").toLowerCase();\n    const order = def.byteOrder || def.wordOrder || \"BE\";\n\n    if (datatype === \"bool\" || datatype === \"boolean\" || Number(def.fc) === 1 || Number(def.fc) === 2) {\n        return regs[0] ? 1 : 0;\n    }\n\n    if (datatype === \"int16\") return Buffer.from([(regs[0] >> 8) & 0xff, regs[0] & 0xff]).readInt16BE(0);\n    if (datatype === \"uint16\") return Number(regs[0]);\n\n    const b = regBuffer(regs, order);\n\n    if (datatype === \"int32\") return b.readInt32BE(0);\n    if (datatype === \"uint32\") return b.readUInt32BE(0);\n    if (datatype === \"float\" || datatype === \"float32\" || datatype === \"floatbe\" || datatype === \"floatle\") {\n        return b.readFloatBE(0);\n    }\n\n    throw new Error(`unsupported datatype: ${datatype}`);\n}\n\ntry {\n    const def = msg.readDef;\n    if (!def || !def.name) throw new Error(\"missing msg.readDef.name\");\n\n    const regs = toRegisters(msg);\n    if (!regs || !regs.length) throw new Error(`no Modbus data for ${def.name}`);\n\n    let value = parseValue(regs, def);\n    const scale = Number(def.readScale ?? 1);\n    const offset = Number(def.offset ?? 0);\n    if (Number.isFinite(scale)) value *= scale;\n    if (Number.isFinite(offset)) value += offset;\n\n    const deviceId = msg.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\n    const fullKey = `${deviceId}_${def.name}`;\n\n    global.set(fullKey, value, store);\n    global.set(fullKey, value);\n\n    msg.payload = { [fullKey]: value };\n    msg.topic = fullKey;\n    msg.value = value;\n\n    node.status({ fill: \"green\", shape: \"dot\", text: `${fullKey}=${value}` });\n    return [msg, null];\n} catch (err) {\n    node.status({ fill: \"red\", shape: \"ring\", text: err.message });\n    msg.payload = { ok: false, error: err.message, readDef: msg.readDef };\n    return [null, msg];\n}",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 720,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "sf_modbus_status_to_online_flag",
+    "type": "subflow",
+    "name": "SF_MODBUS_STATUS_TO_ONLINE_FLAG",
+    "info": "Convert status messages from a Node-RED status node into global.modbus_online and optional IEC104 invalid events.\nConnect a Status node scoped to your Modbus getter/write nodes into this subflow.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_status_flag"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 520,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mb_status_flag",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#F4D35E"
+  },
+  {
+    "id": "mb_status_flag",
+    "type": "function",
+    "z": "sf_modbus_status_to_online_flag",
+    "name": "Status → global.modbus_online",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst t = (msg.status && msg.status.text) ? String(msg.status.text).toLowerCase() : String(msg.payload || \"\").toLowerCase();\n\nlet online = global.get(\"modbus_online\", store);\nlet eventPayload = \"status-check\";\n\nif (t.includes(\"reconnecting\") || t.includes(\"timeout\") || t.includes(\"error\") || t === \"initialize\" || t.includes(\"not connected\")) {\n    online = false;\n    eventPayload = \"invalid\";\n} else if (t.includes(\"connected\") || t.includes(\"active\") || t.includes(\"queue empty\")) {\n    online = true;\n    eventPayload = \"online\";\n}\n\nglobal.set(\"modbus_online\", !!online, store);\nglobal.set(\"modbus_online\", !!online);\n\nnode.status({\n    fill: online ? \"green\" : \"red\",\n    shape: \"dot\",\n    text: online ? \"Modbus online\" : \"Modbus offline\"\n});\n\nmsg.payload = eventPayload;\nmsg.modbus_online = !!online;\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 300,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_iec104_point_publisher",
+    "type": "subflow",
+    "name": "SF_IEC104_POINT_PUBLISHER",
+    "info": "Read global values and convert configured iec104Points[] into IEC104 JSON messages.\nIf input payload is \"invalid\" or modbus_online=false, emits QUALITY_INVALID messages.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_build_points"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 740,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_build_points",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#9AD0C2"
+  },
+  {
+    "id": "iec104_build_points",
+    "type": "function",
+    "z": "sf_iec104_point_publisher",
+    "name": "Build IEC104 point messages",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nconst pointTemplates = (Array.isArray(cfg.iec104Points) && cfg.iec104Points.length)\n    ? cfg.iec104Points.map(p => {\n        const out = Object.assign({}, p);\n        if (out.name && !String(out.name).startsWith(deviceId + \"_\")) out.name = `${deviceId}_${out.name}`;\n        return out;\n      })\n    : templates.filter(t => t.type && !String(t.type).startsWith(\"C_\"));\n\nconst invalidRequest = msg.payload === \"invalid\" || msg.modbus_online === false || global.get(\"modbus_online\", store) === false;\nconst outMsgs = [];\n\nfunction roundByScale(num, scale) {\n    if (!Number.isFinite(num)) return num;\n    if (!scale || scale === 1) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(Math.abs(scale))));\n    return Number(num.toFixed(decimals));\n}\n\nfor (const entry of pointTemplates) {\n    if (!entry || !entry.name || !entry.type || entry.address === undefined) continue;\n    if (String(entry.type).startsWith(\"C_\")) continue;\n\n    const raw = global.get(entry.name, store);\n    const scale = Number(entry.scale ?? 1);\n\n    let value = 0;\n    let qualifier = \"IEC60870_QUALITY_GOOD\";\n\n    if (invalidRequest || raw === undefined || raw === null || Number.isNaN(Number(raw))) {\n        qualifier = \"IEC60870_QUALITY_INVALID\";\n    } else {\n        value = roundByScale(Number(raw) * scale, scale);\n        if (entry.type === \"M_SP_TB_1\" || entry.type === \"M_SP_NA_1\") value = value ? 1 : 0;\n    }\n\n    outMsgs.push({\n        payload: {\n            type: entry.type,\n            address: Number(entry.address),\n            value,\n            qualifier\n        },\n        pointName: entry.name\n    });\n}\n\nnode.status({\n    fill: invalidRequest ? \"yellow\" : \"green\",\n    shape: \"dot\",\n    text: `${outMsgs.length} IEC104 points${invalidRequest ? \" INVALID\" : \"\"}`\n});\n\nreturn [outMsgs];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_iec104_server_bridge",
+    "type": "subflow",
+    "name": "SF_IEC104_SERVER_BRIDGE",
+    "info": "Bridge Node-RED messages to an external json-iec104-server daemon.\nInput: IEC104 point/control JSON messages for daemon stdin.\nOutput: JSON messages emitted by daemon stdout, usually IEC104 command events.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_to_daemon_string"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 840,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_json_parse",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "IEC104_DAEMON_PATH",
+        "type": "str",
+        "value": "/usr/local/bin/json-iec104-server"
+      }
+    ],
+    "meta": {},
+    "color": "#F7B267"
+  },
+  {
+    "id": "iec104_to_daemon_string",
+    "type": "function",
+    "z": "sf_iec104_server_bridge",
+    "name": "Prepare line for daemon",
+    "func": "if (typeof msg.payload === \"string\") {\n    if (!msg.payload.endsWith(\"\\n\")) msg.payload += \"\\n\";\n    return msg;\n}\n\nmsg.payload = JSON.stringify(msg.payload) + \"\\n\";\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 220,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_daemon"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_daemon",
+    "type": "daemon",
+    "z": "sf_iec104_server_bridge",
+    "name": "json-iec104-server",
+    "command": "${IEC104_DAEMON_PATH}",
+    "args": "",
+    "autorun": true,
+    "cr": true,
+    "redo": true,
+    "op": "string",
+    "closer": "SIGINT",
+    "icon": "font-awesome/fa-server",
+    "x": 430,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_split_lines"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_split_lines",
+    "type": "function",
+    "z": "sf_iec104_server_bridge",
+    "name": "Split stdout lines",
+    "func": "const text = String(msg.payload || \"\");\nconst lines = text.split(\"\\n\").map(s => s.trim()).filter(s => s.length > 2);\nreturn [lines.map(line => ({ payload: line }))];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 620,
+    "y": 80,
+    "wires": [
+      [
+        "iec104_json_parse"
+      ]
+    ]
+  },
+  {
+    "id": "iec104_json_parse",
+    "type": "json",
+    "z": "sf_iec104_server_bridge",
+    "name": "Parse daemon JSON",
+    "property": "payload",
+    "action": "obj",
+    "pretty": false,
+    "x": 790,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_iec104_command_to_modbus_write",
+    "type": "subflow",
+    "name": "SF_IEC104_COMMAND_TO_MODBUS_WRITE",
+    "info": "Convert IEC104 execute commands to Modbus write payloads using global.iec104_templates, then write via modbus-flex-write.\nOutput 1: Modbus write success output.\nOutput 2: Modbus write error output.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cmd_to_modbus_payload"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 760,
+        "y": 80,
+        "wires": [
+          {
+            "id": "cmd_modbus_write",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 760,
+        "y": 140,
+        "wires": [
+          {
+            "id": "cmd_modbus_write",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#E2C2FF"
+  },
+  {
+    "id": "cmd_to_modbus_payload",
+    "type": "function",
+    "z": "sf_iec104_command_to_modbus_write",
+    "name": "IEC104 command → Modbus write",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst cmd = msg.payload || {};\n\n// Only execute should write to Modbus. Select/check events are intentionally ignored.\nif (cmd.action && cmd.action !== \"execute\") {\n    node.status({ fill: \"grey\", shape: \"ring\", text: `ignored action=${cmd.action}` });\n    return null;\n}\n\nconst matched = templates.find(e => e.type === cmd.type && Number(e.address) === Number(cmd.address));\n\nif (!matched) {\n    node.warn(`No command mapping for type=${cmd.type}, IOA=${cmd.address}`);\n    node.status({ fill: \"red\", shape: \"ring\", text: \"mapping not found\" });\n    return null;\n}\n\nif (matched.datatype === \"bool\" || matched.datatype === \"boolean\") {\n    const b = !!(cmd.value === true || cmd.value === 1 || cmd.value === \"1\");\n    const coilOn = (matched.coilOn !== undefined) ? matched.coilOn : 1;\n    const coilOff = (matched.coilOff !== undefined) ? matched.coilOff : 0;\n\n    msg.payload = {\n        fc: 5,\n        unitid: Number(matched.unitid),\n        address: Number(matched.modbusAddress),\n        value: b ? coilOn : coilOff,\n        quantity: 1\n    };\n\n    node.status({ fill: \"blue\", shape: \"dot\", text: `${matched.name}=${b ? 1 : 0}` });\n    return msg;\n}\n\nconst scale = (matched.scale != null) ? Number(matched.scale) : 1;\nconst value = Number(cmd.value) * scale;\nconst buf = Buffer.alloc(4);\n\nconst outPayload = {\n    fc: 16,\n    unitid: Number(matched.unitid),\n    address: Number(matched.modbusAddress),\n    quantity: 2,\n    value: []\n};\n\nswitch (String(matched.datatype || \"\").toLowerCase()) {\n    case \"int16\":\n    case \"uint16\":\n        outPayload.fc = 6;\n        outPayload.quantity = 1;\n        outPayload.value = Math.round(value);\n        break;\n\n    case \"int32\":\n        buf.writeInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"uint32\":\n        buf.writeUInt32LE(Math.round(value));\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeUInt32BE(Math.round(value));\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    case \"float\":\n    case \"float32\":\n        if (matched.byteOrder === \"LEswap\" || matched.byteOrder === \"LE16swap\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(2), buf.readUInt16LE(0)];\n        } else if (matched.byteOrder === \"LE\") {\n            buf.writeFloatLE(value);\n            outPayload.value = [buf.readUInt16LE(0), buf.readUInt16LE(2)];\n        } else {\n            buf.writeFloatBE(value);\n            outPayload.value = [buf.readUInt16BE(0), buf.readUInt16BE(2)];\n        }\n        break;\n\n    default:\n        node.error(`Unsupported datatype: ${matched.datatype}`, msg);\n        node.status({ fill: \"red\", shape: \"ring\", text: `bad datatype ${matched.datatype}` });\n        return null;\n}\n\nmsg.payload = outPayload;\nnode.status({ fill: \"blue\", shape: \"dot\", text: `${matched.name} write` });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 80,
+    "wires": [
+      [
+        "cmd_modbus_write"
+      ]
+    ]
+  },
+  {
+    "id": "cmd_modbus_write",
+    "type": "modbus-flex-write",
+    "z": "sf_iec104_command_to_modbus_write",
+    "name": "Modbus writer",
+    "showStatusActivities": false,
+    "showErrors": true,
+    "showWarnings": true,
+    "server": "cfg_modbus_client_env",
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 600,
+    "y": 80,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "sf_mqtt_set_connectivity",
+    "type": "subflow",
+    "name": "SF_MQTT_SET_CONNECTIVITY",
+    "info": "Set global.internetAvailable from ping/MQTT connectivity message. Payload false/0/'false' means offline; anything else means online.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_set_connectivity"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 500,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_set_connectivity",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#92B4EC"
+  },
+  {
+    "id": "mqtt_set_connectivity",
+    "type": "function",
+    "z": "sf_mqtt_set_connectivity",
+    "name": "Set global.internetAvailable",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst v = msg.payload;\nconst online = !(v === false || v === 0 || v === \"0\" || String(v).toLowerCase() === \"false\");\nglobal.set(\"internetAvailable\", online, store);\nglobal.set(\"internetAvailable\", online);\nnode.status({ fill: online ? \"green\" : \"red\", shape: \"dot\", text: online ? \"online\" : \"offline\" });\nmsg.payload = { internetAvailable: online };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 300,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_mqtt_build_or_queue",
+    "type": "subflow",
+    "name": "SF_MQTT_BUILD_OR_QUEUE",
+    "info": "Build cloud MQTT payload from global values and siteConfig.mqttPayload.fields.\nIf internetAvailable=true and queue is empty, emits realtime message.\nIf offline, queues sampled payloads.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_build_queue"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 640,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_build_queue",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      },
+      {
+        "name": "MQTT_TOPIC",
+        "type": "str",
+        "value": "tichhop-vhouse/pms/tichhop-vhouse/det-chungtien"
+      },
+      {
+        "name": "QUEUE_MAX_SIZE",
+        "type": "num",
+        "value": "10000"
+      },
+      {
+        "name": "QUEUE_SAMPLE_INTERVAL_SECONDS",
+        "type": "num",
+        "value": "300"
+      }
+    ],
+    "meta": {},
+    "color": "#99DBF5"
+  },
+  {
+    "id": "mqtt_build_queue",
+    "type": "function",
+    "z": "sf_mqtt_build_or_queue",
+    "name": "Build MQTT payload or queue",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst site = cfg.site || {};\nconst deviceId = site.deviceId || env.get(\"DEVICE_ID\") || \"DEVICE\";\nconst fields = (cfg.mqttPayload && Array.isArray(cfg.mqttPayload.fields)) ? cfg.mqttPayload.fields : [];\n\nfunction roundByScale(num, scale) {\n    if (!Number.isFinite(num)) return num;\n    if (!scale || scale === 1) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(Math.abs(scale))));\n    return Number(num.toFixed(decimals));\n}\n\nconst result = {};\nfor (const field of fields) {\n    const fullKey = String(field).startsWith(deviceId + \"_\") ? field : `${deviceId}_${field}`;\n    const raw = global.get(fullKey, store);\n    const template = templates.find(t => t.name === fullKey);\n    const scale = Number((template && template.scale !== undefined) ? template.scale : 1);\n    if (raw === undefined || raw === null || Number.isNaN(Number(raw))) {\n        result[field.replace(deviceId + \"_\", \"\")] = null;\n    } else {\n        result[field.replace(deviceId + \"_\", \"\")] = roundByScale(Number(raw) * scale, scale);\n    }\n}\n\nmsg.topic = env.get(\"MQTT_TOPIC\") || (cfg.mqtt && cfg.mqtt.topic) || \"\";\nmsg.payload = [{\n    name: site.siteName || site.siteId || deviceId,\n    type: site.projectType || \"104_SOL\",\n    ts: Math.floor(Date.now() / 1000),\n    ...result\n}];\n\nconst online = global.get(\"internetAvailable\", store) === true;\nlet queue = flow.get(\"mqtt_queue\") || [];\nconst maxQueueSize = Number(env.get(\"QUEUE_MAX_SIZE\") || 10000);\nconst sampleIntervalMs = Number(env.get(\"QUEUE_SAMPLE_INTERVAL_SECONDS\") || 300) * 1000;\nconst now = Date.now();\nconst lastQueueTime = flow.get(\"mqtt_last_queue_time\") || 0;\n\nconst publishMsg = { topic: msg.topic, payload: msg.payload };\n\nif (online && queue.length === 0) {\n    node.status({ fill: \"green\", shape: \"dot\", text: \"publish realtime\" });\n    return publishMsg;\n}\n\nif (!online && (now - lastQueueTime >= sampleIntervalMs)) {\n    if (queue.length >= maxQueueSize) queue.shift();\n    queue.push(publishMsg);\n    flow.set(\"mqtt_queue\", queue);\n    flow.set(\"mqtt_last_queue_time\", now);\n    node.status({ fill: \"yellow\", shape: \"ring\", text: `queued ${queue.length}` });\n} else if (online && queue.length > 0) {\n    if (queue.length >= maxQueueSize) queue.shift();\n    queue.push(publishMsg);\n    flow.set(\"mqtt_queue\", queue);\n    node.status({ fill: \"blue\", shape: \"ring\", text: `queue pending ${queue.length}` });\n} else {\n    node.status({ fill: \"grey\", shape: \"ring\", text: `skip queue ${queue.length}` });\n}\n\nreturn null;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 360,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_mqtt_flush_queue",
+    "type": "subflow",
+    "name": "SF_MQTT_FLUSH_QUEUE",
+    "info": "Flush exactly one queued MQTT message when global.internetAvailable=true. Trigger it every 1 second or every few seconds.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_flush_queue"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 560,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_flush_queue",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#A0C49D"
+  },
+  {
+    "id": "mqtt_flush_queue",
+    "type": "function",
+    "z": "sf_mqtt_flush_queue",
+    "name": "Flush one queued MQTT message",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst online = global.get(\"internetAvailable\", store) === true;\nlet queue = flow.get(\"mqtt_queue\") || [];\n\nif (!online || queue.length === 0) {\n    node.status({ fill: online ? \"grey\" : \"red\", shape: \"ring\", text: online ? \"queue empty\" : \"offline\" });\n    return null;\n}\n\nconst next = queue.shift();\nflow.set(\"mqtt_queue\", queue);\nnode.status({ fill: \"green\", shape: \"dot\", text: `flush, left ${queue.length}` });\nreturn next;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "sf_daily_snapshot",
+    "type": "subflow",
+    "name": "SF_DAILY_SNAPSHOT",
+    "info": "Snapshot one global key into another. Manual numeric payload overrides source value; otherwise uses configured source key.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "daily_snapshot_fn"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 620,
+        "y": 80,
+        "wires": [
+          {
+            "id": "daily_snapshot_fn",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      },
+      {
+        "name": "SNAPSHOT_SOURCE",
+        "type": "str",
+        "value": "a_Inv_D"
+      },
+      {
+        "name": "SNAPSHOT_TARGET",
+        "type": "str",
+        "value": "a_Inv_D1"
+      }
+    ],
+    "meta": {},
+    "color": "#FFB4B4"
+  },
+  {
+    "id": "daily_snapshot_fn",
+    "type": "function",
+    "z": "sf_daily_snapshot",
+    "name": "Snapshot global value",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nconst sourceShort = (cfg.snapshot && cfg.snapshot.source) || env.get(\"SNAPSHOT_SOURCE\") || \"a_Inv_D\";\nconst targetShort = (cfg.snapshot && cfg.snapshot.target) || env.get(\"SNAPSHOT_TARGET\") || \"a_Inv_D1\";\n\nconst sourceKey = String(sourceShort).startsWith(deviceId + \"_\") ? sourceShort : `${deviceId}_${sourceShort}`;\nconst targetKey = String(targetShort).startsWith(deviceId + \"_\") ? targetShort : `${deviceId}_${targetShort}`;\n\nconst toNum = v => {\n    const n = Number(v);\n    return Number.isFinite(n) ? n : NaN;\n};\n\nlet val = toNum(msg.payload);\nif (Number.isNaN(val)) val = toNum(global.get(sourceKey, store));\n\nif (Number.isNaN(val)) {\n    node.status({ fill: \"red\", shape: \"ring\", text: `no numeric ${sourceKey}` });\n    return null;\n}\n\nglobal.set(targetKey, val, store);\nglobal.set(`${targetKey}_ts`, Date.now(), store);\nglobal.set(targetKey, val);\nglobal.set(`${targetKey}_ts`, Date.now());\n\nmsg.payload = { [targetKey]: val, ts: Date.now() };\nnode.status({ fill: \"green\", shape: \"dot\", text: `${targetKey}=${val}` });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 340,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cfg_modbus_client_env",
+    "type": "modbus-client",
+    "name": "MODBUS_CLIENT_FROM_ENV",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${MODBUS_HOST}",
+    "tcpPort": "${MODBUS_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "1",
+    "commandDelay": "50",
+    "clientTimeout": "${MODBUS_TIMEOUT_MS}",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "${MODBUS_RECONNECT_MS}",
+    "parallelUnitIdsAllowed": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": false
+  },
+  {
+    "id": "cfg_mqtt_tls_env",
+    "type": "tls-config",
+    "name": "MQTT_TLS_FROM_ENV",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "${MQTT_CERT}",
+    "keyname": "${MQTT_KEY}",
+    "caname": "${MQTT_CA}",
+    "servername": "",
+    "verifyservercert": "${MQTT_VERIFY_SERVER_CERT}",
+    "alpnprotocol": ""
+  },
+  {
+    "id": "cfg_mqtt_broker_env",
+    "type": "mqtt-broker",
+    "name": "MQTT_BROKER_FROM_ENV",
+    "broker": "${MQTT_HOST}",
+    "port": "${MQTT_PORT}",
+    "tls": "cfg_mqtt_tls_env",
+    "clientid": "${MQTT_CLIENT_ID}",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

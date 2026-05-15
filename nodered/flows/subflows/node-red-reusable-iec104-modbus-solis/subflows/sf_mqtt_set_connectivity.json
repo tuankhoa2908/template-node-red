@@ -1,0 +1,104 @@
+[
+  {
+    "id": "sf_mqtt_set_connectivity",
+    "type": "subflow",
+    "name": "SF_MQTT_SET_CONNECTIVITY",
+    "info": "Set global.internetAvailable from ping/MQTT connectivity message. Payload false/0/'false' means offline; anything else means online.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_set_connectivity"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 500,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_set_connectivity",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#92B4EC"
+  },
+  {
+    "id": "mqtt_set_connectivity",
+    "type": "function",
+    "z": "sf_mqtt_set_connectivity",
+    "name": "Set global.internetAvailable",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst v = msg.payload;\nconst online = !(v === false || v === 0 || v === \"0\" || String(v).toLowerCase() === \"false\");\nglobal.set(\"internetAvailable\", online, store);\nglobal.set(\"internetAvailable\", online);\nnode.status({ fill: online ? \"green\" : \"red\", shape: \"dot\", text: online ? \"online\" : \"offline\" });\nmsg.payload = { internetAvailable: online };\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 300,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cfg_mqtt_tls_env",
+    "type": "tls-config",
+    "name": "MQTT_TLS_FROM_ENV",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "${MQTT_CERT}",
+    "keyname": "${MQTT_KEY}",
+    "caname": "${MQTT_CA}",
+    "servername": "",
+    "verifyservercert": "${MQTT_VERIFY_SERVER_CERT}",
+    "alpnprotocol": ""
+  },
+  {
+    "id": "cfg_mqtt_broker_env",
+    "type": "mqtt-broker",
+    "name": "MQTT_BROKER_FROM_ENV",
+    "broker": "${MQTT_HOST}",
+    "port": "${MQTT_PORT}",
+    "tls": "cfg_mqtt_tls_env",
+    "clientid": "${MQTT_CLIENT_ID}",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

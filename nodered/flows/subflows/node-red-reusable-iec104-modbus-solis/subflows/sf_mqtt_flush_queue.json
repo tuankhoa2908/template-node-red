@@ -1,0 +1,104 @@
+[
+  {
+    "id": "sf_mqtt_flush_queue",
+    "type": "subflow",
+    "name": "SF_MQTT_FLUSH_QUEUE",
+    "info": "Flush exactly one queued MQTT message when global.internetAvailable=true. Trigger it every 1 second or every few seconds.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_flush_queue"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 560,
+        "y": 80,
+        "wires": [
+          {
+            "id": "mqtt_flush_queue",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#A0C49D"
+  },
+  {
+    "id": "mqtt_flush_queue",
+    "type": "function",
+    "z": "sf_mqtt_flush_queue",
+    "name": "Flush one queued MQTT message",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst online = global.get(\"internetAvailable\", store) === true;\nlet queue = flow.get(\"mqtt_queue\") || [];\n\nif (!online || queue.length === 0) {\n    node.status({ fill: online ? \"grey\" : \"red\", shape: \"ring\", text: online ? \"queue empty\" : \"offline\" });\n    return null;\n}\n\nconst next = queue.shift();\nflow.set(\"mqtt_queue\", queue);\nnode.status({ fill: \"green\", shape: \"dot\", text: `flush, left ${queue.length}` });\nreturn next;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 320,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "cfg_mqtt_tls_env",
+    "type": "tls-config",
+    "name": "MQTT_TLS_FROM_ENV",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "${MQTT_CERT}",
+    "keyname": "${MQTT_KEY}",
+    "caname": "${MQTT_CA}",
+    "servername": "",
+    "verifyservercert": "${MQTT_VERIFY_SERVER_CERT}",
+    "alpnprotocol": ""
+  },
+  {
+    "id": "cfg_mqtt_broker_env",
+    "type": "mqtt-broker",
+    "name": "MQTT_BROKER_FROM_ENV",
+    "broker": "${MQTT_HOST}",
+    "port": "${MQTT_PORT}",
+    "tls": "cfg_mqtt_tls_env",
+    "clientid": "${MQTT_CLIENT_ID}",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

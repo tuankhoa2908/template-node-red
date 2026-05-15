@@ -1,0 +1,454 @@
+[
+  {
+    "id": "flow_reusable_example",
+    "type": "tab",
+    "label": "Reusable IEC104 Modbus MQTT - Example",
+    "disabled": false,
+    "info": "Example wiring for reusable subflows."
+  },
+  {
+    "id": "ex_load_config",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Load site config on start",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "",
+    "once": true,
+    "onceDelay": "1",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 80,
+    "wires": [
+      [
+        "ex_sf_config"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_config",
+    "type": "subflow:sf_config_load_site_profile",
+    "z": "flow_reusable_example",
+    "name": "Load config",
+    "x": 420,
+    "y": 80,
+    "wires": [
+      [
+        "ex_dbg_config"
+      ],
+      [
+        "ex_dbg_config"
+      ]
+    ]
+  },
+  {
+    "id": "ex_dbg_config",
+    "type": "debug",
+    "z": "flow_reusable_example",
+    "name": "config/debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 660,
+    "y": 80,
+    "wires": []
+  },
+  {
+    "id": "ex_poll_modbus",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Poll Modbus every 5s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 180,
+    "wires": [
+      [
+        "ex_sf_modbus"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_modbus",
+    "type": "subflow:sf_modbus_poll_and_store",
+    "z": "flow_reusable_example",
+    "name": "Modbus poll+store",
+    "x": 430,
+    "y": 180,
+    "wires": [
+      [
+        "ex_dbg_modbus"
+      ],
+      [
+        "ex_dbg_modbus"
+      ]
+    ]
+  },
+  {
+    "id": "ex_dbg_modbus",
+    "type": "debug",
+    "z": "flow_reusable_example",
+    "name": "modbus/debug",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 680,
+    "y": 180,
+    "wires": []
+  },
+  {
+    "id": "ex_poll_iec104",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Publish IEC104 every 5s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "5",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 300,
+    "wires": [
+      [
+        "ex_sf_iec104_pub"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_iec104_pub",
+    "type": "subflow:sf_iec104_point_publisher",
+    "z": "flow_reusable_example",
+    "name": "Build IEC104 points",
+    "x": 430,
+    "y": 300,
+    "wires": [
+      [
+        "ex_sf_iec104_bridge"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_iec104_bridge",
+    "type": "subflow:sf_iec104_server_bridge",
+    "z": "flow_reusable_example",
+    "name": "IEC104 daemon bridge",
+    "x": 680,
+    "y": 300,
+    "wires": [
+      [
+        "ex_sf_cmd_write"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_cmd_write",
+    "type": "subflow:sf_iec104_command_to_modbus_write",
+    "z": "flow_reusable_example",
+    "name": "Command to Modbus",
+    "x": 950,
+    "y": 300,
+    "wires": [
+      [
+        "ex_dbg_cmd"
+      ],
+      [
+        "ex_dbg_cmd"
+      ]
+    ]
+  },
+  {
+    "id": "ex_dbg_cmd",
+    "type": "debug",
+    "z": "flow_reusable_example",
+    "name": "command/write debug",
+    "active": false,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 1220,
+    "y": 300,
+    "wires": []
+  },
+  {
+    "id": "ex_poll_mqtt",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Build MQTT every 15s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "15",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 440,
+    "wires": [
+      [
+        "ex_sf_mqtt_build"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_mqtt_build",
+    "type": "subflow:sf_mqtt_build_or_queue",
+    "z": "flow_reusable_example",
+    "name": "MQTT build/queue",
+    "x": 420,
+    "y": 440,
+    "wires": [
+      [
+        "ex_mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "ex_flush",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Flush MQTT queue every 1s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "1",
+    "crontab": "",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 170,
+    "y": 500,
+    "wires": [
+      [
+        "ex_sf_mqtt_flush"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_mqtt_flush",
+    "type": "subflow:sf_mqtt_flush_queue",
+    "z": "flow_reusable_example",
+    "name": "MQTT flush queue",
+    "x": 420,
+    "y": 500,
+    "wires": [
+      [
+        "ex_mqtt_out"
+      ]
+    ]
+  },
+  {
+    "id": "ex_mqtt_out",
+    "type": "mqtt out",
+    "z": "flow_reusable_example",
+    "name": "MQTT out",
+    "topic": "",
+    "qos": "${MQTT_QOS}",
+    "retain": "${MQTT_RETAIN}",
+    "respTopic": "",
+    "contentType": "",
+    "userProps": "",
+    "correl": "",
+    "expiry": "",
+    "broker": "cfg_mqtt_broker_env",
+    "x": 700,
+    "y": 470,
+    "wires": []
+  },
+  {
+    "id": "ex_ping",
+    "type": "ping",
+    "z": "flow_reusable_example",
+    "protocol": "Automatic",
+    "mode": "timed",
+    "name": "Internet ping",
+    "host": "${INTERNET_CHECK_HOST}",
+    "timer": "2",
+    "inputs": 0,
+    "x": 150,
+    "y": 600,
+    "wires": [
+      [
+        "ex_sf_mqtt_conn"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_mqtt_conn",
+    "type": "subflow:sf_mqtt_set_connectivity",
+    "z": "flow_reusable_example",
+    "name": "Set internet flag",
+    "x": 410,
+    "y": 600,
+    "wires": [
+      []
+    ]
+  },
+  {
+    "id": "ex_snapshot",
+    "type": "inject",
+    "z": "flow_reusable_example",
+    "name": "Snapshot daily 23:59",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "",
+    "crontab": "59 23 * * *",
+    "once": false,
+    "onceDelay": "",
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 160,
+    "y": 700,
+    "wires": [
+      [
+        "ex_sf_snapshot"
+      ]
+    ]
+  },
+  {
+    "id": "ex_sf_snapshot",
+    "type": "subflow:sf_daily_snapshot",
+    "z": "flow_reusable_example",
+    "name": "Daily snapshot",
+    "x": 410,
+    "y": 700,
+    "wires": [
+      [
+        "ex_dbg_snapshot"
+      ]
+    ]
+  },
+  {
+    "id": "ex_dbg_snapshot",
+    "type": "debug",
+    "z": "flow_reusable_example",
+    "name": "snapshot/debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 650,
+    "y": 700,
+    "wires": []
+  },
+  {
+    "id": "cfg_modbus_client_env",
+    "type": "modbus-client",
+    "name": "MODBUS_CLIENT_FROM_ENV",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${MODBUS_HOST}",
+    "tcpPort": "${MODBUS_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "1",
+    "commandDelay": "50",
+    "clientTimeout": "${MODBUS_TIMEOUT_MS}",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "${MODBUS_RECONNECT_MS}",
+    "parallelUnitIdsAllowed": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "showLogs": false
+  },
+  {
+    "id": "cfg_mqtt_tls_env",
+    "type": "tls-config",
+    "name": "MQTT_TLS_FROM_ENV",
+    "cert": "",
+    "key": "",
+    "ca": "",
+    "certname": "${MQTT_CERT}",
+    "keyname": "${MQTT_KEY}",
+    "caname": "${MQTT_CA}",
+    "servername": "",
+    "verifyservercert": "${MQTT_VERIFY_SERVER_CERT}",
+    "alpnprotocol": ""
+  },
+  {
+    "id": "cfg_mqtt_broker_env",
+    "type": "mqtt-broker",
+    "name": "MQTT_BROKER_FROM_ENV",
+    "broker": "${MQTT_HOST}",
+    "port": "${MQTT_PORT}",
+    "tls": "cfg_mqtt_tls_env",
+    "clientid": "${MQTT_CLIENT_ID}",
+    "autoConnect": true,
+    "usetls": true,
+    "protocolVersion": "4",
+    "keepalive": "60",
+    "cleansession": true,
+    "birthTopic": "",
+    "birthQos": "0",
+    "birthRetain": "false",
+    "birthPayload": "",
+    "birthMsg": {},
+    "closeTopic": "",
+    "closeQos": "0",
+    "closeRetain": "false",
+    "closePayload": "",
+    "closeMsg": {},
+    "willTopic": "",
+    "willQos": "0",
+    "willRetain": "false",
+    "willPayload": "",
+    "willMsg": {},
+    "userProps": "",
+    "sessionExpiry": ""
+  }
+]

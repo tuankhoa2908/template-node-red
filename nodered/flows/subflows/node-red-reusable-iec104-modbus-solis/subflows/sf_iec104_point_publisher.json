@@ -1,0 +1,64 @@
+[
+  {
+    "id": "sf_iec104_point_publisher",
+    "type": "subflow",
+    "name": "SF_IEC104_POINT_PUBLISHER",
+    "info": "Read global values and convert configured iec104Points[] into IEC104 JSON messages.\nIf input payload is \"invalid\" or modbus_online=false, emits QUALITY_INVALID messages.",
+    "category": "IEC104/Modbus Reusable",
+    "in": [
+      {
+        "x": 40,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_build_points"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 740,
+        "y": 80,
+        "wires": [
+          {
+            "id": "iec104_build_points",
+            "port": 0
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "DEVICE_ID",
+        "type": "str",
+        "value": "NM2-INV01"
+      },
+      {
+        "name": "GLOBAL_STORE",
+        "type": "str",
+        "value": "default"
+      }
+    ],
+    "meta": {},
+    "color": "#9AD0C2"
+  },
+  {
+    "id": "iec104_build_points",
+    "type": "function",
+    "z": "sf_iec104_point_publisher",
+    "name": "Build IEC104 point messages",
+    "func": "const store = env.get(\"GLOBAL_STORE\") || \"default\";\nconst cfg = global.get(\"siteConfig\", store) || global.get(\"siteConfig\") || {};\nconst templates = global.get(\"iec104_templates\", store) || global.get(\"iec104_templates\") || [];\nconst deviceId = (cfg.site && cfg.site.deviceId) || env.get(\"DEVICE_ID\") || \"DEVICE\";\n\nconst pointTemplates = (Array.isArray(cfg.iec104Points) && cfg.iec104Points.length)\n    ? cfg.iec104Points.map(p => {\n        const out = Object.assign({}, p);\n        if (out.name && !String(out.name).startsWith(deviceId + \"_\")) out.name = `${deviceId}_${out.name}`;\n        return out;\n      })\n    : templates.filter(t => t.type && !String(t.type).startsWith(\"C_\"));\n\nconst invalidRequest = msg.payload === \"invalid\" || msg.modbus_online === false || global.get(\"modbus_online\", store) === false;\nconst outMsgs = [];\n\nfunction roundByScale(num, scale) {\n    if (!Number.isFinite(num)) return num;\n    if (!scale || scale === 1) return num;\n    const decimals = Math.max(0, Math.round(-Math.log10(Math.abs(scale))));\n    return Number(num.toFixed(decimals));\n}\n\nfor (const entry of pointTemplates) {\n    if (!entry || !entry.name || !entry.type || entry.address === undefined) continue;\n    if (String(entry.type).startsWith(\"C_\")) continue;\n\n    const raw = global.get(entry.name, store);\n    const scale = Number(entry.scale ?? 1);\n\n    let value = 0;\n    let qualifier = \"IEC60870_QUALITY_GOOD\";\n\n    if (invalidRequest || raw === undefined || raw === null || Number.isNaN(Number(raw))) {\n        qualifier = \"IEC60870_QUALITY_INVALID\";\n    } else {\n        value = roundByScale(Number(raw) * scale, scale);\n        if (entry.type === \"M_SP_TB_1\" || entry.type === \"M_SP_NA_1\") value = value ? 1 : 0;\n    }\n\n    outMsgs.push({\n        payload: {\n            type: entry.type,\n            address: Number(entry.address),\n            value,\n            qualifier\n        },\n        pointName: entry.name\n    });\n}\n\nnode.status({\n    fill: invalidRequest ? \"yellow\" : \"green\",\n    shape: \"dot\",\n    text: `${outMsgs.length} IEC104 points${invalidRequest ? \" INVALID\" : \"\"}`\n});\n\nreturn [outMsgs];",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 400,
+    "y": 80,
+    "wires": [
+      []
+    ]
+  }
+]

@@ -1,0 +1,95 @@
+{
+  "_comment": "Danh sách inverter SolarEdge SunSpec - chỉ cần thêm/xóa entry ở đây",
+  "_register_map": {
+    "description": "SunSpec Inverter Model 101/103 — block 40070..40096",
+    "startPLC": 40070,
+    "endPLC": 40096,
+    "fields": {
+      "40070": "I_AC_CurrentSF DID (model id)",
+      "40071": "I_AC_CurrentSF Length",
+      "40072": "I_AC_Current (total)",
+      "40073": "I_AC_CurrentA",
+      "40074": "I_AC_CurrentB",
+      "40075": "I_AC_CurrentC",
+      "40076": "I_AC_Current_SF",
+      "40080": "I_AC_VoltageAN",
+      "40081": "I_AC_VoltageBN",
+      "40082": "I_AC_VoltageCN",
+      "40083": "I_AC_Voltage_SF",
+      "40084": "I_AC_Power",
+      "40085": "I_AC_Power_SF",
+      "40086": "I_AC_Frequency",
+      "40087": "I_AC_Frequency_SF",
+      "40090": "I_AC_VA_Reactive",
+      "40091": "I_AC_VAR_SF",
+      "40092": "I_AC_PF",
+      "40093": "I_AC_PF_SF",
+      "40094": "I_AC_Energy_WH (lo)",
+      "40095": "I_AC_Energy_WH (hi)",
+      "40096": "I_AC_Energy_WH_SF"
+    }
+  },
+  "defaults": {
+    "startPLC": 40070,
+    "endPLC": 40096,
+    "pollIntervalSeconds": 5
+  },
+  "inverters": [
+    {
+      "name": "INV4",
+      "ip": "192.168.1.141",
+      "port": 1502,
+      "unitid": 4,
+      "enabled": true
+    },
+    {
+      "name": "INV3",
+      "ip": "192.168.1.170",
+      "port": 1502,
+      "unitid": 3,
+      "enabled": true
+    },
+    {
+      "name": "INV9",
+      "ip": "192.168.1.147",
+      "port": 1502,
+      "unitid": 9,
+      "enabled": true
+    },
+    {
+      "name": "INV1",
+      "ip": "192.168.1.154",
+      "port": 1502,
+      "unitid": 1,
+      "enabled": true
+    },
+    {
+      "name": "INV5",
+      "ip": "192.168.1.175",
+      "port": 1502,
+      "unitid": 5,
+      "enabled": true
+    },
+    {
+      "name": "INV6",
+      "ip": "192.168.1.178",
+      "port": 1502,
+      "unitid": 6,
+      "enabled": true
+    },
+    {
+      "name": "INV7",
+      "ip": "192.168.1.161",
+      "port": 1502,
+      "unitid": 7,
+      "enabled": true
+    },
+    {
+      "name": "INV8",
+      "ip": "192.168.1.188",
+      "port": 1502,
+      "unitid": 8,
+      "enabled": true
+    }
+  ]
+}

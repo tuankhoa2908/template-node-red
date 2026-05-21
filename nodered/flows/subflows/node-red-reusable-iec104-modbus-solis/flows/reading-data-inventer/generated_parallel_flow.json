@@ -1,0 +1,503 @@
+[
+  {
+    "id": "sf_solaredge_inv_reader",
+    "type": "subflow",
+    "name": "SF_SOLAREDGE_INV_READER",
+    "info": "Đọc và parse SolarEdge SunSpec (40070..40096).\n\nSử dụng Environment Variables để cấu hình kết nối Modbus TCP độc lập cho mỗi instance.\n\nĐầu vào: Bất kỳ (để trigger đọc).\nĐầu ra 1: Dữ liệu đã parse (để ghi log hoặc tổng hợp).\nĐầu ra 2: Lỗi.",
+    "category": "SolarEdge Inverter",
+    "in": [
+      {
+        "x": 60,
+        "y": 140,
+        "wires": [
+          {
+            "id": "se_build_request"
+          }
+        ]
+      }
+    ],
+    "out": [
+      {
+        "x": 880,
+        "y": 120,
+        "wires": [
+          {
+            "id": "se_parse_response",
+            "port": 0
+          }
+        ]
+      },
+      {
+        "x": 880,
+        "y": 200,
+        "wires": [
+          {
+            "id": "se_parse_response",
+            "port": 1
+          }
+        ]
+      }
+    ],
+    "env": [
+      {
+        "name": "INV_NAME",
+        "type": "str",
+        "value": "INV1"
+      },
+      {
+        "name": "INV_IP",
+        "type": "str",
+        "value": "192.168.1.154"
+      },
+      {
+        "name": "INV_PORT",
+        "type": "num",
+        "value": "1502"
+      },
+      {
+        "name": "INV_UNITID",
+        "type": "num",
+        "value": "1"
+      },
+      {
+        "name": "START_PLC",
+        "type": "num",
+        "value": "40070"
+      },
+      {
+        "name": "END_PLC",
+        "type": "num",
+        "value": "40096"
+      }
+    ],
+    "meta": {},
+    "color": "#F3B567"
+  },
+  {
+    "id": "se_build_request",
+    "type": "function",
+    "z": "sf_solaredge_inv_reader",
+    "name": "Build Modbus request",
+    "func": "const invName = env.get(\"INV_NAME\");\nconst invIp = env.get(\"INV_IP\");\nconst unitId = Number(env.get(\"INV_UNITID\") || 1);\nconst startPLC = Number(env.get(\"START_PLC\") || 40070);\nconst endPLC = Number(env.get(\"END_PLC\") || 40096);\n\nmsg.payload = {\n    fc: 3,\n    unitid: unitId,\n    address: startPLC - 1,\n    quantity: endPLC - startPLC + 1\n};\n\nmsg.meta = {\n    inv: { name: invName, ip: invIp, unitid: unitId },\n    startPLC,\n    endPLC,\n    ts: Math.floor(Date.now() / 1000)\n};\n\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 220,
+    "y": 140,
+    "wires": [
+      [
+        "se_modbus_getter"
+      ]
+    ]
+  },
+  {
+    "id": "se_modbus_getter",
+    "type": "modbus-flex-getter",
+    "z": "sf_solaredge_inv_reader",
+    "name": "Modbus read",
+    "showStatusActivities": true,
+    "showErrors": true,
+    "showWarnings": true,
+    "logIOActivities": false,
+    "server": "sf_modbus_client_internal",
+    "useIOFile": false,
+    "ioFile": "",
+    "useIOForPayload": false,
+    "emptyMsgOnFail": false,
+    "keepMsgProperties": true,
+    "delayOnStart": false,
+    "startDelayTime": "",
+    "x": 430,
+    "y": 140,
+    "wires": [
+      [
+        "se_parse_response"
+      ],
+      [
+        "se_parse_response"
+      ]
+    ]
+  },
+  {
+    "id": "se_parse_response",
+    "type": "function",
+    "z": "sf_solaredge_inv_reader",
+    "name": "Parse SunSpec",
+    "func": "const meta = msg.meta || {};\nconst inv = meta.inv || { name: env.get(\"INV_NAME\") };\nconst basePLC = meta.startPLC || 40070;\n\nfunction getRegs(msg) {\n    if (Array.isArray(msg.payload)) return msg.payload;\n    if (msg.payload && Array.isArray(msg.payload.data)) return msg.payload.data;\n    if (msg.responseBuffer && Array.isArray(msg.responseBuffer.data)) return msg.responseBuffer.data;\n    return null;\n}\n\nconst regs = getRegs(msg);\n\nif (!regs || regs.length === 0) {\n    const errMsg = `No data from ${inv.name}`;\n    node.status({ fill: \"red\", shape: \"ring\", text: errMsg });\n    msg.payload = { ok: false, error: errMsg, inv };\n    return [null, msg];\n}\n\nfunction idx(a) { return a - basePLC; }\nfunction u16(a) { const i = idx(a); if (i < 0 || i >= regs.length) return null; return Number(regs[i]) & 0xFFFF; }\nfunction s16(a) { const v = u16(a); if (v === null) return null; return v > 0x7FFF ? v - 0x10000 : v; }\nfunction u32SS(a) { const lo = u16(a), hi = u16(a+1); if (lo===null||hi===null) return null; return hi*65536+lo; }\nfunction sf(raw, s) { if (raw===null||s===null) return null; return raw * Math.pow(10, s); }\nfunction rnd(v, d) { d=d||3; if (v===null||v===undefined||Number.isNaN(v)) return null; const m=Math.pow(10,d); return Math.round(v*m)/m; }\n\ntry {\n    const cSF=s16(40076), vSF=s16(40083), pSF=s16(40085), fSF=s16(40087);\n    const vrSF=s16(40091), pfSF=s16(40093), eSF=s16(40096);\n    const acW = sf(s16(40084), pSF);\n    const acKW = acW===null ? null : acW/1000;\n    const rVAr = sf(s16(40090), vrSF);\n    const rKVAr = rVAr===null ? null : rVAr/1000;\n    const pfPct = sf(s16(40092), pfSF);\n    const eWh = sf(u32SS(40094), eSF);\n\n    const result = {\n        name: inv.name, type: 'INVERTER', ip: inv.ip, unitid: inv.unitid,\n        ts: meta.ts || Math.floor(Date.now()/1000),\n        model_did: u16(40070), model_length: u16(40071),\n        Pinv_out_kw: rnd(acKW,3), Qinv_kvar: rnd(rKVAr,3),\n        Ua_V: rnd(sf(u16(40080),vSF),2), Ub_V: rnd(sf(u16(40081),vSF),2), Uc_V: rnd(sf(u16(40082),vSF),2),\n        Ia_A: rnd(sf(u16(40073),cSF),3), Ib_A: rnd(sf(u16(40074),cSF),3), Ic_A: rnd(sf(u16(40075),cSF),3),\n        I_total_A: rnd(sf(u16(40072),cSF),3),\n        frequency_Hz: rnd(sf(u16(40086),fSF),3),\n        pf_percent: rnd(pfPct,3), power_factor: pfPct===null ? null : rnd(pfPct/100,4),\n        Ainv_total_kWh: eWh===null ? null : rnd(eWh/1000,3),\n        raw_registers: regs\n    };\n    \n    // Lưu thẳng vào global context luôn\n    global.set(inv.name, result);\n    \n    msg.payload = result;\n    msg.topic = `inverter/${inv.name}`;\n    node.status({ fill: 'green', shape: 'dot', text: `${inv.name}: ${rnd(acKW,1)||0}kW` });\n    return [msg, null];\n} catch (err) {\n    node.status({ fill: 'red', shape: 'ring', text: err.message });\n    msg.payload = { ok: false, error: err.message, inv };\n    return [null, msg];\n}",
+    "outputs": 2,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 640,
+    "y": 140,
+    "wires": [
+      [],
+      []
+    ]
+  },
+  {
+    "id": "sf_modbus_client_internal",
+    "type": "modbus-client",
+    "z": "sf_solaredge_inv_reader",
+    "name": "MODBUS_${INV_NAME}",
+    "clienttype": "tcp",
+    "bufferCommands": true,
+    "stateLogEnabled": false,
+    "queueLogEnabled": false,
+    "failureLogEnabled": true,
+    "tcpHost": "${INV_IP}",
+    "tcpPort": "${INV_PORT}",
+    "tcpType": "DEFAULT",
+    "serialPort": "/dev/ttyUSB",
+    "serialType": "RTU-BUFFERD",
+    "serialBaudrate": "9600",
+    "serialDatabits": "8",
+    "serialStopbits": "1",
+    "serialParity": "none",
+    "serialConnectionDelay": "100",
+    "serialAsciiResponseStartDelimiter": "0x3A",
+    "unit_id": "${INV_UNITID}",
+    "commandDelay": "1",
+    "clientTimeout": "3000",
+    "reconnectOnTimeout": true,
+    "reconnectTimeout": "1000",
+    "parallelUnitIdsAllowed": true,
+    "showErrors": false,
+    "showWarnings": true,
+    "showLogs": true
+  },
+  {
+    "id": "flow_generated_parallel",
+    "type": "tab",
+    "label": "Parallel Inverters (5)",
+    "disabled": false,
+    "info": "Tự động sinh bởi script. Chạy song song 100% bằng Subflow."
+  },
+  {
+    "id": "trigger_all_inverters",
+    "type": "inject",
+    "z": "flow_generated_parallel",
+    "name": "Poll every 15s",
+    "props": [
+      {
+        "p": "payload"
+      }
+    ],
+    "repeat": "15",
+    "crontab": "",
+    "once": false,
+    "onceDelay": 0.1,
+    "topic": "",
+    "payload": "",
+    "payloadType": "date",
+    "x": 140,
+    "y": 100,
+    "wires": [
+      [
+        "subflow_inst_0",
+        "subflow_inst_1",
+        "subflow_inst_2",
+        "subflow_inst_3",
+        "subflow_inst_4"
+      ]
+    ]
+  },
+  {
+    "id": "join_all_inverters",
+    "type": "join",
+    "z": "flow_generated_parallel",
+    "name": "Aggregate",
+    "mode": "auto",
+    "build": "array",
+    "property": "payload",
+    "propertyType": "msg",
+    "key": "topic",
+    "joiner": "\\n",
+    "joinerType": "str",
+    "accumulate": false,
+    "timeout": "10",
+    "count": "",
+    "reduceRight": false,
+    "reduceExp": "",
+    "reduceInit": "",
+    "reduceInitType": "",
+    "reduceFixup": "",
+    "x": 600,
+    "y": 100,
+    "wires": [
+      [
+        "summary_function"
+      ]
+    ]
+  },
+  {
+    "id": "summary_function",
+    "type": "function",
+    "z": "flow_generated_parallel",
+    "name": "Build Summary",
+    "func": "const results = msg.payload || [];\nlet totalPower = 0;\nlet totalEnergy = 0;\nconst details = [];\n\nfor (const r of results) {\n    if (r && r.name) {\n        totalPower += (r.Pinv_out_kw || 0);\n        totalEnergy += (r.Ainv_total_kWh || 0);\n        details.push({ name: r.name, kW: r.Pinv_out_kw, kWh: r.Ainv_total_kWh });\n    }\n}\n\nconst summary = {\n    ts: Math.floor(Date.now() / 1000),\n    total_inverters: results.length,\n    total_power_kW: Math.round(totalPower * 1000) / 1000,\n    total_energy_kWh: Math.round(totalEnergy * 1000) / 1000,\n    details\n};\n\nglobal.set('INV_SUMMARY', summary);\nmsg.payload = summary;\nmsg.topic = 'inverter/summary';\nnode.status({ fill: 'green', shape: 'dot', text: `${results.length} INV | ${summary.total_power_kW}kW` });\nreturn msg;",
+    "outputs": 1,
+    "timeout": 0,
+    "noerr": 0,
+    "initialize": "",
+    "finalize": "",
+    "libs": [],
+    "x": 780,
+    "y": 100,
+    "wires": [
+      [
+        "debug_summary"
+      ]
+    ]
+  },
+  {
+    "id": "debug_summary",
+    "type": "debug",
+    "z": "flow_generated_parallel",
+    "name": "Summary / debug",
+    "active": true,
+    "tosidebar": true,
+    "console": false,
+    "tostatus": false,
+    "complete": "payload",
+    "targetType": "msg",
+    "x": 980,
+    "y": 100,
+    "wires": []
+  },
+  {
+    "id": "subflow_inst_0",
+    "type": "subflow:sf_solaredge_inv_reader",
+    "z": "flow_generated_parallel",
+    "name": "Read INV4",
+    "env": [
+      {
+        "name": "INV_NAME",
+        "value": "INV4",
+        "type": "str"
+      },
+      {
+        "name": "INV_IP",
+        "value": "192.168.1.141",
+        "type": "str"
+      },
+      {
+        "name": "INV_PORT",
+        "value": "1502",
+        "type": "num"
+      },
+      {
+        "name": "INV_UNITID",
+        "value": "4",
+        "type": "num"
+      },
+      {
+        "name": "START_PLC",
+        "value": "40070",
+        "type": "num"
+      },
+      {
+        "name": "END_PLC",
+        "value": "40096",
+        "type": "num"
+      }
+    ],
+    "x": 380,
+    "y": 180,
+    "wires": [
+      [
+        "join_all_inverters"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "subflow_inst_1",
+    "type": "subflow:sf_solaredge_inv_reader",
+    "z": "flow_generated_parallel",
+    "name": "Read INV3",
+    "env": [
+      {
+        "name": "INV_NAME",
+        "value": "INV3",
+        "type": "str"
+      },
+      {
+        "name": "INV_IP",
+        "value": "192.168.1.170",
+        "type": "str"
+      },
+      {
+        "name": "INV_PORT",
+        "value": "1502",
+        "type": "num"
+      },
+      {
+        "name": "INV_UNITID",
+        "value": "3",
+        "type": "num"
+      },
+      {
+        "name": "START_PLC",
+        "value": "40070",
+        "type": "num"
+      },
+      {
+        "name": "END_PLC",
+        "value": "40096",
+        "type": "num"
+      }
+    ],
+    "x": 380,
+    "y": 240,
+    "wires": [
+      [
+        "join_all_inverters"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "subflow_inst_2",
+    "type": "subflow:sf_solaredge_inv_reader",
+    "z": "flow_generated_parallel",
+    "name": "Read INV9",
+    "env": [
+      {
+        "name": "INV_NAME",
+        "value": "INV9",
+        "type": "str"
+      },
+      {
+        "name": "INV_IP",
+        "value": "192.168.1.147",
+        "type": "str"
+      },
+      {
+        "name": "INV_PORT",
+        "value": "1502",
+        "type": "num"
+      },
+      {
+        "name": "INV_UNITID",
+        "value": "9",
+        "type": "num"
+      },
+      {
+        "name": "START_PLC",
+        "value": "40070",
+        "type": "num"
+      },
+      {
+        "name": "END_PLC",
+        "value": "40096",
+        "type": "num"
+      }
+    ],
+    "x": 380,
+    "y": 300,
+    "wires": [
+      [
+        "join_all_inverters"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "subflow_inst_3",
+    "type": "subflow:sf_solaredge_inv_reader",
+    "z": "flow_generated_parallel",
+    "name": "Read INV1",
+    "env": [
+      {
+        "name": "INV_NAME",
+        "value": "INV1",
+        "type": "str"
+      },
+      {
+        "name": "INV_IP",
+        "value": "192.168.1.154",
+        "type": "str"
+      },
+      {
+        "name": "INV_PORT",
+        "value": "1502",
+        "type": "num"
+      },
+      {
+        "name": "INV_UNITID",
+        "value": "1",
+        "type": "num"
+      },
+      {
+        "name": "START_PLC",
+        "value": "40070",
+        "type": "num"
+      },
+      {
+        "name": "END_PLC",
+        "value": "40096",
+        "type": "num"
+      }
+    ],
+    "x": 380,
+    "y": 360,
+    "wires": [
+      [
+        "join_all_inverters"
+      ],
+      []
+    ]
+  },
+  {
+    "id": "subflow_inst_4",
+    "type": "subflow:sf_solaredge_inv_reader",
+    "z": "flow_generated_parallel",
+    "name": "Read INV5",
+    "env": [
+      {
+        "name": "INV_NAME",
+        "value": "INV5",
+        "type": "str"
+      },
+      {
+        "name": "INV_IP",
+        "value": "192.168.1.175",
+        "type": "str"
+      },
+      {
+        "name": "INV_PORT",
+        "value": "1502",
+        "type": "num"
+      },
+      {
+        "name": "INV_UNITID",
+        "value": "5",
+        "type": "num"
+      },
+      {
+        "name": "START_PLC",
+        "value": "40070",
+        "type": "num"
+      },
+      {
+        "name": "END_PLC",
+        "value": "40096",
+        "type": "num"
+      }
+    ],
+    "x": 380,
+    "y": 420,
+    "wires": [
+      [
+        "join_all_inverters"
+      ],
+      []
+    ]
+  }
+]

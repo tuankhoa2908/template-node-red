@@ -3,6 +3,8 @@ name: template-node-red-pi
 services:
   mosquitto:
     image: "eclipse-mosquitto:2"
+    profiles:
+      - mqtt
     restart: always
     ports:
       - "127.0.0.1:1883:1883"
@@ -30,12 +32,8 @@ services:
       dockerfile: Dockerfile
     image: "template-node-red-pi-nodered:4.1.9"
     restart: always
-    depends_on:
-      mosquitto:
-        condition: service_healthy
     ports:
       - "${NODERED_BIND:-127.0.0.1}:1880:1880"  # Dev: set NODERED_BIND=0.0.0.0 to expose externally
-      - "${IEC104_PORT:-2404}:2404"  # IEC104 SCADA — externally accessible for grid operator (EVN)
     logging:
       driver: "json-file"
       options:
@@ -43,34 +41,10 @@ services:
         max-file: "5"
     environment:
       TZ: ${TZ:-UTC}
-      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET:?NODE_RED_CREDENTIAL_SECRET is required}
-      ZONE_ID: ${ZONE_ID:-zone-01}
-      TB_CLOUD_HOST: ${TB_CLOUD_HOST:?TB_CLOUD_HOST is required}
-      TB_CLOUD_MQTT_PORT: ${TB_CLOUD_MQTT_PORT:-8883}
-      TB_ACCESS_TOKEN: ${TB_ACCESS_TOKEN:?TB_ACCESS_TOKEN is required}
-      OPCUA_HOST: ${OPCUA_HOST:-127.0.0.1}
-      OPCUA_PORT: ${OPCUA_PORT:-4840}
-      OPCUA_DEVICE_ID: ${OPCUA_DEVICE_ID:-opcua-001}
-      BACNET_INTERFACE: ${BACNET_INTERFACE:-0.0.0.0}
-      BACNET_PORT: ${BACNET_PORT:-47808}
-      BACNET_DEVICE_ID: ${BACNET_DEVICE_ID:-bacnet-001}
-      SERIAL_PORT: ${SERIAL_PORT:-/dev/ttyUSB0}
-      SERIAL_BAUD: ${SERIAL_BAUD:-9600}
-      MODBUS_RTU_UNIT_ID: ${MODBUS_RTU_UNIT_ID:-1}
-      MODBUS_RTU_POLL_INTERVAL_MS: ${MODBUS_RTU_POLL_INTERVAL_MS:-30000}
-      IEC104_PORT: ${IEC104_PORT:-2404}
-      IEC104_COMMON_ADDRESS: ${IEC104_COMMON_ADDRESS:-1}
-      IEC104_SIM_INTERVAL: ${IEC104_SIM_INTERVAL:-0}
-      MODBUS_HOST: ${MODBUS_HOST:-127.0.0.1}
-      MODBUS_PORT: ${MODBUS_PORT:-502}
-      MODBUS_EXPORT_LIMIT_MIN: ${MODBUS_EXPORT_LIMIT_MIN:-0}
-      MODBUS_EXPORT_LIMIT_MAX: ${MODBUS_EXPORT_LIMIT_MAX:-100}
-      RBE_DEADBAND_TEMPERATURE_C: ${RBE_DEADBAND_TEMPERATURE_C:-0.5}
-      RBE_DEADBAND_VIBRATION_MM_S: ${RBE_DEADBAND_VIBRATION_MM_S:-0.1}
-      RBE_DEADBAND_POWER_DRAW_KW: ${RBE_DEADBAND_POWER_DRAW_KW:-0.5}
-      RBE_DEADBAND_DEFAULT: ${RBE_DEADBAND_DEFAULT:-0}
-    env_file:
-      - .env
+      NODE_RED_CREDENTIAL_SECRET: ${NODE_RED_CREDENTIAL_SECRET:-}
+      NODE_RED_ADMIN_USER: ${NODE_RED_ADMIN_USER:-}
+      NODE_RED_ADMIN_PASSWORD: ${NODE_RED_ADMIN_PASSWORD:-}
+      NODE_RED_ADMIN_PASS_HASH: ${NODE_RED_ADMIN_PASS_HASH:-}
     # Uncomment to enable serial/RS-485 access for Modbus RTU (Story 1.7)
     # devices:
     #   - "/dev/ttyUSB0:/dev/ttyUSB0"
@@ -88,6 +62,8 @@ services:
 
   netdata:
     image: "netdata/netdata:stable"
+    profiles:
+      - monitoring
     restart: always
     ports:
       - "127.0.0.1:19999:19999"

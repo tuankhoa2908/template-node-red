@@ -1,0 +1,30 @@
+{
+  "ASDU": 3,
+  "offline_udt_time": 5,
+  "M_SP_TB_1_config": [
+    82
+  ],
+  "M_ME_NC_1_config": [
+    1,
+    2,
+    3,
+    5,
+    6,
+    7,
+    8,
+    9,
+    10,
+    11,
+    80,
+    81
+  ],
+  "M_ME_NC_1_deadband_percent": 0,
+  "C_SE_NC_1_config": [
+    12,
+    13
+  ],
+  "C_SC_NA_1_config": [
+    11
+  ],
+  "mode_command": "direct"
+}

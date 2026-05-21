@@ -1,20 +1,25 @@
 /**
  * Node-RED Settings - Nexus-E Edge Stack
- * Admin UI bound to localhost only (SSH tunnel access)
- * Password-protected admin interface
+ * Admin UI is published by Docker Compose. Keep the compose bind address on
+ * localhost unless NODE_RED_ADMIN_PASSWORD or NODE_RED_ADMIN_PASS_HASH is set.
  */
-module.exports = {
+function getAdminPasswordHash() {
+    if (process.env.NODE_RED_ADMIN_PASS_HASH) {
+        return process.env.NODE_RED_ADMIN_PASS_HASH;
+    }
+
+    if (process.env.NODE_RED_ADMIN_PASSWORD) {
+        return require("bcryptjs").hashSync(process.env.NODE_RED_ADMIN_PASSWORD, 8);
+    }
+
+    return null;
+}
+
+const adminPasswordHash = getAdminPasswordHash();
+
+const settings = {
     uiPort: 1880,
     uiHost: "0.0.0.0",
-
-    adminAuth: {
-        type: "credentials",
-        users: [{
-            username: process.env.NODE_RED_ADMIN_USER || "admin",
-            password: process.env.NODE_RED_ADMIN_PASS_HASH || "$2b$08$invalid_hash_replace_me",
-            permissions: "*"
-        }]
-    },
 
     credentialSecret: process.env.NODE_RED_CREDENTIAL_SECRET || false,
 
@@ -22,6 +27,12 @@ module.exports = {
     flowFilePretty: true,
 
     functionGlobalContext: {},
+
+    contextStorage: {
+        default: {
+            module: "localfilesystem"
+        }
+    },
 
     logging: {
         console: {
@@ -39,3 +50,16 @@ module.exports = {
         }
     }
 };
+
+if (adminPasswordHash) {
+    settings.adminAuth = {
+        type: "credentials",
+        users: [{
+            username: process.env.NODE_RED_ADMIN_USER || "admin",
+            password: adminPasswordHash,
+            permissions: "*"
+        }]
+    };
+}
+
+module.exports = settings;

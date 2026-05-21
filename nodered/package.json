@@ -3,6 +3,7 @@
     "description": "template-node-red-pi Edge Node-RED Configuration",
     "version": "1.0.0",
     "dependencies": {
+        "bcryptjs": "~2.4.3",
         "node-red-contrib-bacnet": "~0.3.0",
         "node-red-contrib-buffer-parser": "~3.2.2",
         "node-red-contrib-calculate": "~0.1.4",

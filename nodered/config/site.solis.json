@@ -1,0 +1,268 @@
+{
+  "site": {
+    "siteId": "det-chungtien",
+    "siteName": "S3Logger-VHouse-Det-TrungTien-Hanam",
+    "deviceId": "NM2-INV01",
+    "projectType": "104_SOL"
+  },
+  "modbusReads": [
+    {
+      "name": "p_Out",
+      "fc": 3,
+      "unitid": 3,
+      "address": 38,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "p_Inv_Out",
+      "fc": 3,
+      "unitid": 5,
+      "address": 32,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "a_Inv_D",
+      "fc": 3,
+      "unitid": 5,
+      "address": 46,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "p_Set_kW",
+      "fc": 3,
+      "unitid": 4,
+      "address": 0,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "p_Set_Exp_Enable",
+      "fc": 1,
+      "unitid": 4,
+      "address": 0,
+      "quantity": 1,
+      "datatype": "bool",
+      "readScale": 1
+    },
+    {
+      "name": "Ua",
+      "fc": 3,
+      "unitid": 3,
+      "address": 0,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "Ub",
+      "fc": 3,
+      "unitid": 3,
+      "address": 2,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "Uc",
+      "fc": 3,
+      "unitid": 3,
+      "address": 4,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "Ia",
+      "fc": 3,
+      "unitid": 3,
+      "address": 6,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "Ib",
+      "fc": 3,
+      "unitid": 3,
+      "address": 8,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "Ic",
+      "fc": 3,
+      "unitid": 3,
+      "address": 10,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    },
+    {
+      "name": "frequency",
+      "fc": 3,
+      "unitid": 3,
+      "address": 12,
+      "quantity": 2,
+      "datatype": "floatle",
+      "byteOrder": "LE",
+      "readScale": 1
+    }
+  ],
+  "iec104Points": [
+    {
+      "name": "p_Out",
+      "type": "M_ME_NC_1",
+      "address": 1,
+      "scale": 1
+    },
+    {
+      "name": "p_Inv_Out",
+      "type": "M_ME_NC_1",
+      "address": 2,
+      "scale": 1
+    },
+    {
+      "name": "a_Inv_D1",
+      "type": "M_ME_NC_1",
+      "address": 3,
+      "scale": 1
+    },
+    {
+      "name": "Ua",
+      "type": "M_ME_NC_1",
+      "address": 5,
+      "scale": 1
+    },
+    {
+      "name": "Ub",
+      "type": "M_ME_NC_1",
+      "address": 6,
+      "scale": 1
+    },
+    {
+      "name": "Uc",
+      "type": "M_ME_NC_1",
+      "address": 7,
+      "scale": 1
+    },
+    {
+      "name": "Ia",
+      "type": "M_ME_NC_1",
+      "address": 8,
+      "scale": 1
+    },
+    {
+      "name": "Ib",
+      "type": "M_ME_NC_1",
+      "address": 9,
+      "scale": 1
+    },
+    {
+      "name": "Ic",
+      "type": "M_ME_NC_1",
+      "address": 10,
+      "scale": 1
+    },
+    {
+      "name": "frequency",
+      "type": "M_ME_NC_1",
+      "address": 11,
+      "scale": 1
+    },
+    {
+      "name": "p_Set_kW",
+      "type": "M_ME_NC_1",
+      "address": 80,
+      "scale": 0.001
+    },
+    {
+      "name": "p_Set_Per",
+      "type": "M_ME_NC_1",
+      "address": 81,
+      "scale": 0.0002857
+    },
+    {
+      "name": "p_Set_Exp_Enable",
+      "type": "M_SP_TB_1",
+      "address": 82,
+      "scale": 1
+    }
+  ],
+  "iec104Commands": [
+    {
+      "name": "SETPOINT_Power_Percent",
+      "type": "C_SE_NC_1",
+      "address": 12,
+      "scale": 3500,
+      "modbusAddress": 0,
+      "unitid": 4,
+      "datatype": "float",
+      "byteOrder": "LE"
+    },
+    {
+      "name": "SETPOINT_Power",
+      "type": "C_SE_NC_1",
+      "address": 13,
+      "scale": 1000,
+      "modbusAddress": 0,
+      "unitid": 4,
+      "datatype": "float",
+      "byteOrder": "LE"
+    },
+    {
+      "name": "enable_SETPOINT_Power",
+      "type": "C_SC_NA_1",
+      "address": 11,
+      "scale": 1,
+      "modbusAddress": 0,
+      "unitid": 4,
+      "datatype": "bool"
+    }
+  ],
+  "mqtt": {
+    "topic": "tichhop-vhouse/pms/tichhop-vhouse/det-chungtien"
+  },
+  "mqttPayload": {
+    "fields": [
+      "p_Out",
+      "p_Inv_Out",
+      "a_Inv_D1",
+      "Ua",
+      "Ub",
+      "Uc",
+      "Ia",
+      "Ib",
+      "Ic",
+      "frequency",
+      "p_Set_Per",
+      "p_Set_kW",
+      "p_Set_Exp_Enable"
+    ]
+  },
+  "digitalKeys": [
+    "p_Set_Exp_Enable",
+    "p_Set_Total_Enable"
+  ],
+  "snapshot": {
+    "source": "a_Inv_D",
+    "target": "a_Inv_D1"
+  }
+}
